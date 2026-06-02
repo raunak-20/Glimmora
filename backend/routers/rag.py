@@ -29,20 +29,24 @@ router = APIRouter()
 # Constants
 
 
-ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".markdown"}
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".txt", ".md", ".markdown",
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cpp", ".c", ".rs", ".rb",
+    ".php", ".cs", ".swift", ".kt", ".scala", ".sql", ".yaml", ".yml", ".json",
+    ".xml", ".html", ".css", ".lua", ".dart", ".groovy", ".r"
+}
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_UPLOAD_MB", "20"))
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
 
 
 # Schemas
-
-
 class DocumentRead(BaseModel):
     id: int
     filename: str
     chunk_count: int
     status: str
+    language: Optional[str]
     error_message: Optional[str]
 
     model_config = {"from_attributes": True}

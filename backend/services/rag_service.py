@@ -33,16 +33,49 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gemini-1.5-flash")
+LLM_MODEL = os.getenv("GEMINI_MODEL", "")
 
-VECTOR_STORE_DIR = Path(os.getenv("VECTOR_STORE_DIR", "./vector_stores"))
+VECTOR_STORE_DIR = Path(os.getenv("VECTOR_STORE_DIR", ""))
 
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", ""))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", ""))
 
-TOP_K = int(os.getenv("RAG_TOP_K", "4"))
+TOP_K = int(os.getenv("TOP_K", ""))
 
 VECTOR_STORE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Language detection map
+LANGUAGE_MAP = {
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".jsx": "jsx",
+    ".tsx": "tsx",
+    ".java": "java",
+    ".go": "go",
+    ".cpp": "cpp",
+    ".c": "c",
+    ".rs": "rust",
+    ".rb": "ruby",
+    ".php": "php",
+    ".cs": "csharp",
+    ".swift": "swift",
+    ".kt": "kotlin",
+    ".scala": "scala",
+    ".sql": "sql",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".json": "json",
+    ".xml": "xml",
+    ".html": "html",
+    ".css": "css",
+    ".lua": "lua",
+    ".dart": "dart",
+    ".groovy": "groovy",
+    ".r": "r",
+    ".pdf": "pdf",
+    ".md": "markdown",
+}
 
 
 # Gemini setup
@@ -61,6 +94,11 @@ embeddings = HuggingFaceEmbeddings(
 )
 
 
+def _get_file_language(filename: str) -> Optional[str]:
+    ext = Path(filename).suffix.lower()
+    return LANGUAGE_MAP.get(ext)
+
+
 # Schemas
 
 
@@ -72,6 +110,7 @@ class RAGQueryRequest(BaseModel):
 class RAGQueryResponse(BaseModel):
     answer: str
     source_documents: list[str]
+    source_languages: list[Optional[str]] = []
 
 
 class DocumentIngestionResult(BaseModel):
@@ -158,6 +197,7 @@ def ingest_document(
 ) -> DocumentIngestionResult:
 
     file_hash = _file_sha256(file_path)
+    language = _get_file_language(original_filename)
 
     doc_record = (
         db.query(RAGDocument)
@@ -171,6 +211,7 @@ def ingest_document(
             user_id=user.id,
             filename=original_filename,
             file_hash=file_hash,
+            language=language,
             status="processing",
         )
 
@@ -193,6 +234,8 @@ def ingest_document(
 
         for chunk in chunks:
             chunk.metadata["source"] = original_filename
+            if language:
+                chunk.metadata["language"] = language
 
         existing_vs = _load_or_create_vectorstore(user.uid)
 
@@ -261,8 +304,18 @@ def query_documents(
         [doc.page_content for doc in docs]
     )
 
+    languages = list(
+        {
+            doc.metadata.get("language")
+            for doc in docs
+            if doc.metadata.get("language")
+        }
+    )
+
     prompt = f"""
 Answer the user's question using ONLY the context below.
+
+{f'Programming languages in context: {", ".join(languages)}' if languages else ''}
 
 Context:
 {context}
@@ -291,9 +344,15 @@ Question:
         }
     )
 
+    source_languages = [
+        doc.metadata.get("language")
+        for doc in docs
+    ]
+
     return RAGQueryResponse(
         answer=answer,
         source_documents=sources,
+        source_languages=source_languages,
     )
 
 

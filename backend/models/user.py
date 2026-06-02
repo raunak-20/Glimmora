@@ -12,16 +12,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 
-
-
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-
 # User
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -115,6 +110,7 @@ class RAGDocument(Base):
         String(20), default="pending", nullable=False
     )  # pending | processing | ready | error
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    language: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

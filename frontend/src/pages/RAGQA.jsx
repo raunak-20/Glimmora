@@ -35,6 +35,48 @@ function UploadIcon() {
   );
 }
 
+function LanguageBadge({ language }) {
+  if (!language) return null;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        flexShrink: 0,
+        borderRadius: 6,
+        border: "1px solid rgba(99,102,241,.3)",
+        background: "rgba(99,102,241,.15)",
+        padding: "2px 8px",
+        fontSize: 10.5,
+        fontWeight: 500,
+        letterSpacing: ".2em",
+        textTransform: "uppercase",
+        color: "#a5b4fc",
+        marginLeft: 8,
+      }}
+    >
+      {language}
+    </span>
+  );
+}
+
+function CodeIcon() {
+  return (
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="16 18 22 12 16 6" />
+      <polyline points="8 6 2 12 8 18" />
+    </svg>
+  );
+}
+
 function FilePill({ file }) {
   return (
     <div
@@ -70,6 +112,7 @@ function FilePill({ file }) {
           }}
         >
           {file.status} · {file.chunk_count ?? 0} chunks
+          {file.language && ` · ${file.language}`}
         </p>
       </div>
       {file.error_message ? (
@@ -116,6 +159,7 @@ export default function RAGQA() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState([]);
+  const [sourceLanguages, setSourceLanguages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [asking, setAsking] = useState(false);
   const [loadingDocs, setLoadingDocs] = useState(false);
@@ -176,10 +220,12 @@ export default function RAGQA() {
     setSuccess("");
     setAnswer("");
     setSources([]);
+    setSourceLanguages([]);
     try {
       const res = await ragAPI.query(q, topK);
       setAnswer(res.data?.answer || "No answer returned.");
       setSources(res.data?.source_documents || []);
+      setSourceLanguages(res.data?.source_languages || []);
     } catch (err) {
       setError(err.response?.data?.detail || "Query failed.");
     } finally {
@@ -212,8 +258,8 @@ export default function RAGQA() {
             </div>
           </div>
           <p className="rag-hdr-desc">
-            Upload a PDF or markdown file, then ask questions against your
-            private vector store.
+            Upload code files, PDFs, or markdown documents, then ask questions
+            about your codebase using AI-powered retrieval.
           </p>
           <div className="rag-hdr-actions">
             <Link to="/chat" className="rag-btn ghost">
@@ -240,6 +286,95 @@ export default function RAGQA() {
           </div>
         )}
 
+        {/* ── Features info ── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 12,
+            marginBottom: 20,
+          }}
+        >
+          <div
+            style={{
+              borderRadius: 12,
+              border: "1px solid rgba(99,102,241,.2)",
+              background: "rgba(99,102,241,.08)",
+              padding: "12px 14px",
+              fontSize: 12,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 6,
+                color: "#a5b4fc",
+                fontWeight: 600,
+              }}
+            >
+              <CodeIcon />
+              Code-Aware
+            </div>
+            <p style={{ color: "rgba(255,255,255,.5)", lineHeight: 1.4 }}>
+              Detects programming languages automatically
+            </p>
+          </div>
+          <div
+            style={{
+              borderRadius: 12,
+              border: "1px solid rgba(34,211,238,.2)",
+              background: "rgba(34,211,238,.08)",
+              padding: "12px 14px",
+              fontSize: 12,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 6,
+                color: "#06b6d4",
+                fontWeight: 600,
+              }}
+            >
+              ⚡
+              Multi-Language
+            </div>
+            <p style={{ color: "rgba(255,255,255,.5)", lineHeight: 1.4 }}>
+              Query across Python, JS, TS, Go, Rust & more
+            </p>
+          </div>
+          <div
+            style={{
+              borderRadius: 12,
+              border: "1px solid rgba(124,58,237,.2)",
+              background: "rgba(124,58,237,.08)",
+              padding: "12px 14px",
+              fontSize: 12,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 6,
+                color: "#c4b5fd",
+                fontWeight: 600,
+              }}
+            >
+              🧠
+              AI-Powered
+            </div>
+            <p style={{ color: "rgba(255,255,255,.5)", lineHeight: 1.4 }}>
+              Gemini LLM understands code context
+            </p>
+          </div>
+        </div>
+
         {/* ── Main grid ── */}
         <div className="rag-main">
           {/* Left sidebar */}
@@ -249,7 +384,9 @@ export default function RAGQA() {
               <div className="rag-card-hdr">
                 <div>
                   <h2 className="rag-card-title">Upload document</h2>
-                  <p className="rag-card-sub">PDF, markdown, or plain text.</p>
+                  <p className="rag-card-sub">
+                    PDF, Markdown, code files, or plain text.
+                  </p>
                 </div>
                 {uploading && (
                   <span className="badge badge-indigo">Uploading</span>
@@ -268,7 +405,7 @@ export default function RAGQA() {
               >
                 <input
                   type="file"
-                  accept=".pdf,.txt,.md,.markdown"
+                  accept=".pdf,.txt,.md,.markdown,.py,.js,.ts,.jsx,.tsx,.java,.go,.cpp,.rs,.rb,.php,.cs,.swift,.kt,.sql,.yaml,.json,.xml,.html,.css,.lua,.dart,.groovy,.r"
                   style={{ display: "none" }}
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 />
@@ -277,7 +414,7 @@ export default function RAGQA() {
                   {selectedFile ? selectedFile.name : "Choose or drop a file"}
                 </span>
                 <span className="drop-zone-sub">
-                  Click to browse · PDF, MD, TXT
+                  Click to browse · PDF, Markdown, Code, TXT
                 </span>
               </label>
 
@@ -315,6 +452,81 @@ export default function RAGQA() {
                   documents.map((doc) => <FilePill key={doc.id} file={doc} />)
                 )}
               </div>
+
+              {documents.length > 0 && (
+                <div
+                  style={{
+                    marginTop: 18,
+                    paddingTop: 14,
+                    borderTop: "1px solid rgba(255,255,255,.07)",
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: ".3em",
+                      color: "rgba(255,255,255,.45)",
+                      marginBottom: 12,
+                    }}
+                  >
+                    Knowledge Base
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                    }}
+                  >
+                    {(() => {
+                      const langs = new Set(
+                        documents
+                          .filter((d) => d.language)
+                          .map((d) => d.language)
+                      );
+                      const chunkTotal = documents.reduce(
+                        (sum, d) => sum + (d.chunk_count || 0),
+                        0
+                      );
+                      return (
+                        <>
+                          {Array.from(langs).map((lang) => (
+                            <span
+                              key={lang}
+                              style={{
+                                fontSize: 11,
+                                borderRadius: 6,
+                                border: "1px solid rgba(99,102,241,.3)",
+                                background: "rgba(99,102,241,.15)",
+                                padding: "4px 10px",
+                                color: "#a5b4fc",
+                                fontWeight: 500,
+                                letterSpacing: ".2em",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              {lang}
+                            </span>
+                          ))}
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "rgba(255,255,255,.4)",
+                              marginLeft: "auto",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            {chunkTotal} chunks
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
 
@@ -324,7 +536,7 @@ export default function RAGQA() {
               <div>
                 <h2 className="rag-card-title">Ask a question</h2>
                 <p className="rag-card-sub">
-                  Queries use Gemini over your uploaded context.
+                  Code-aware queries powered by Gemini AI using your knowledge base.
                 </p>
               </div>
               <label className="topk-label">
@@ -354,7 +566,7 @@ export default function RAGQA() {
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   rows={4}
-                  placeholder="Ask anything about the uploaded document…"
+                  placeholder="Ask anything about your code and documents…"
                   className="rag-textarea"
                 />
               </div>
@@ -404,7 +616,55 @@ export default function RAGQA() {
                 <div className="qa-sources-wrap">
                   <div className="qa-section-hdr">
                     <span className="qa-section-title">Sources</span>
+                    {sources.length > 0 && (
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          color: "rgba(255,255,255,.4)",
+                        }}
+                      >
+                        {sources.length} result{sources.length !== 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
+
+                  {sources.length > 0 && (
+                    <div
+                      style={{
+                        marginBottom: 12,
+                        paddingBottom: 10,
+                        borderBottom: "1px solid rgba(255,255,255,.07)",
+                        display: "flex",
+                        gap: 6,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {(() => {
+                        const langs = new Set(
+                          sourceLanguages.filter((l) => l)
+                        );
+                        return Array.from(langs).map((lang) => (
+                          <span
+                            key={lang}
+                            style={{
+                              fontSize: 10,
+                              borderRadius: 5,
+                              border: "1px solid rgba(99,102,241,.3)",
+                              background: "rgba(99,102,241,.15)",
+                              padding: "2px 8px",
+                              color: "#a5b4fc",
+                              fontWeight: 500,
+                              letterSpacing: ".15em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {lang}
+                          </span>
+                        ));
+                      })()}
+                    </div>
+                  )}
+
                   <div
                     style={{ display: "flex", flexDirection: "column", gap: 8 }}
                   >
@@ -413,7 +673,7 @@ export default function RAGQA() {
                         Sources will appear here.
                       </div>
                     ) : (
-                      sources.map((src) => (
+                      sources.map((src, idx) => (
                         <div
                           key={src}
                           style={{
@@ -423,9 +683,16 @@ export default function RAGQA() {
                             padding: "10px 12px",
                             fontSize: 13,
                             color: "rgba(255,255,255,.72)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 8,
                           }}
                         >
-                          {src}
+                          <span>{src}</span>
+                          {sourceLanguages[idx] && (
+                            <LanguageBadge language={sourceLanguages[idx]} />
+                          )}
                         </div>
                       ))
                     )}
