@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
+import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -22,25 +23,40 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from models.user import RAGDocument, User
-from services.gemini_client import generate_gemini_content
 
 
 # Config
-
-
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-LLM_MODEL = os.getenv("GEMINI_MODEL", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY is not set")
+
+LLM_MODEL = os.getenv("GEMINI_MODEL")
+
+if not LLM_MODEL:
+    raise RuntimeError("GEMINI_MODEL is not set")
 
 VECTOR_STORE_DIR = Path(os.getenv("VECTOR_STORE_DIR", "./vector_stores"))
 
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
+if not VECTOR_STORE_DIR:
+    raise RuntimeError("VECTOR_STORE_DIR is not set")
 
-TOP_K = int(os.getenv("TOP_K", "4"))
+
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE"))
+if not CHUNK_SIZE:
+    raise RuntimeError("CHUNK_SIZE is not set")
+
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP"))
+if not CHUNK_OVERLAP:
+    raise RuntimeError("CHUNK_OVERLAP is not set")
+
+TOP_K = int(os.getenv("TOP_K"))
+if not TOP_K:
+    raise RuntimeError("TOP_K is not set")
 
 VECTOR_STORE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -76,6 +92,14 @@ LANGUAGE_MAP = {
     ".pdf": "pdf",
     ".md": "markdown",
 }
+
+
+# Gemini setup
+
+
+genai.configure(api_key=GEMINI_API_KEY)
+
+gemini_model = genai.GenerativeModel(LLM_MODEL)
 
 
 # Embeddings
@@ -179,7 +203,7 @@ def _loader_for_file(file_path: str):
 
 def ask_gemini(prompt: str) -> str:
 
-    response = generate_gemini_content(prompt, model=LLM_MODEL)
+    response = gemini_model.generate_content(prompt)
 
     return response.text
 

@@ -1,5 +1,6 @@
 """
-Database configuration — PostgreSQL via SQLAlchemy.
+Database configuration — SQLite via SQLAlchemy (sync + async-compatible).
+Swap DATABASE_URL for PostgreSQL / MySQL in production.
 """
 
 import os
@@ -11,10 +12,6 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-# ---------------------------------------------------------------------------
-# Settings
-# ---------------------------------------------------------------------------
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
@@ -22,6 +19,7 @@ if not DATABASE_URL:
 
 if not DATABASE_URL.startswith("postgresql"):
     raise RuntimeError("DATABASE_URL must be a PostgreSQL connection string")
+
 
 # ---------------------------------------------------------------------------
 # Engine
