@@ -27,8 +27,6 @@ router = APIRouter()
 
 
 # Constants
-
-
 ALLOWED_EXTENSIONS = {
     ".pdf", ".txt", ".md", ".markdown",
     ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cpp", ".c", ".rs", ".rb",

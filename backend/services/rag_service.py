@@ -8,10 +8,9 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
@@ -23,24 +22,25 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from models.user import RAGDocument, User
+from services.gemini_client import generate_gemini_content
 
 
 # Config
 
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 LLM_MODEL = os.getenv("GEMINI_MODEL", "")
 
-VECTOR_STORE_DIR = Path(os.getenv("VECTOR_STORE_DIR", ""))
+VECTOR_STORE_DIR = Path(os.getenv("VECTOR_STORE_DIR", "./vector_stores"))
 
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", ""))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", ""))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
 
-TOP_K = int(os.getenv("TOP_K", ""))
+TOP_K = int(os.getenv("TOP_K", "4"))
 
 VECTOR_STORE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -78,20 +78,19 @@ LANGUAGE_MAP = {
 }
 
 
-# Gemini setup
-
-
-genai.configure(api_key=GEMINI_API_KEY)
-
-gemini_model = genai.GenerativeModel(LLM_MODEL)
-
-
 # Embeddings
 
 
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+_embeddings: Optional[HuggingFaceEmbeddings] = None
+
+
+def get_embeddings() -> HuggingFaceEmbeddings:
+    global _embeddings
+    if _embeddings is None:
+        _embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        )
+    return _embeddings
 
 
 def _get_file_language(filename: str) -> Optional[str]:
@@ -139,7 +138,7 @@ def _load_or_create_vectorstore(user_uid: str) -> Optional[FAISS]:
     if faiss_file.exists():
         return FAISS.load_local(
             str(index_path),
-            embeddings,
+            get_embeddings(),
             allow_dangerous_deserialization=True,
         )
 
@@ -180,7 +179,7 @@ def _loader_for_file(file_path: str):
 
 def ask_gemini(prompt: str) -> str:
 
-    response = gemini_model.generate_content(prompt)
+    response = generate_gemini_content(prompt, model=LLM_MODEL)
 
     return response.text
 
@@ -247,7 +246,7 @@ def ingest_document(
 
         else:
 
-            new_vs = FAISS.from_documents(chunks, embeddings)
+            new_vs = FAISS.from_documents(chunks, get_embeddings())
 
             _save_vectorstore(new_vs, user.uid)
 

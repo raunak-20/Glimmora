@@ -6,10 +6,11 @@ Handles conversation history and responses.
 import os
 from typing import AsyncIterator
 
-import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
 from pydantic import BaseModel
+
+from services.gemini_client import generate_gemini_content
 
 
 # Load environment variables
@@ -21,13 +22,6 @@ GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 DEFAULT_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 DEFAULT_TEMPERATURE: float = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
 DEFAULT_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "2048"))
-
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-
-# Create model instance
-model = genai.GenerativeModel(DEFAULT_MODEL)
-
 
 # Schemas
 class ChatMessage(BaseModel):
@@ -68,7 +62,12 @@ async def chat_completion(request: ChatRequest) -> ChatResponse:
             [f"{msg.role}: {msg.content}" for msg in request.messages]
         )
 
-        response = model.generate_content(prompt)
+        response = generate_gemini_content(
+            prompt,
+            model=request.model,
+            temperature=request.temperature,
+            max_output_tokens=request.max_tokens,
+        )
 
         prompt_tokens = 0
         completion_tokens = 0

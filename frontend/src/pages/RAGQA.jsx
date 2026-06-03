@@ -2,151 +2,73 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI, ragAPI } from "../services/api";
 
-function SparkleIcon({ size = 14 }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-    </svg>
-  );
+function Diamond() {
+  return <span className="d-diamond">◆</span>;
 }
+
 function UploadIcon() {
   return (
     <svg
-      width={20}
-      height={20}
+      width={18}
+      height={18}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.6}
+      strokeWidth={1.7}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5-5 5 5" />
+      <path d="M12 5v12" />
     </svg>
   );
 }
 
-function LanguageBadge({ language }) {
-  if (!language) return null;
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        flexShrink: 0,
-        borderRadius: 6,
-        border: "1px solid rgba(99,102,241,.3)",
-        background: "rgba(99,102,241,.15)",
-        padding: "2px 8px",
-        fontSize: 10.5,
-        fontWeight: 500,
-        letterSpacing: ".2em",
-        textTransform: "uppercase",
-        color: "#a5b4fc",
-        marginLeft: 8,
-      }}
-    >
-      {language}
-    </span>
-  );
-}
-
-function CodeIcon() {
+function IconLogout() {
   return (
     <svg
-      width={16}
-      height={16}
+      width={12}
+      height={12}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
     </svg>
   );
 }
 
-function FilePill({ file }) {
+function FileEntry({ file, deleting, onDelete }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        borderRadius: 12,
-        border: "1px solid rgba(255,255,255,.08)",
-        background: "rgba(255,255,255,.03)",
-        padding: "10px 14px",
-      }}
-    >
-      <div style={{ minWidth: 0 }}>
-        <p
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            color: "white",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {file.filename}
-        </p>
-        <p
-          style={{
-            fontSize: 11.5,
-            color: "rgba(255,255,255,.35)",
-            marginTop: 2,
-          }}
-        >
-          {file.status} · {file.chunk_count ?? 0} chunks
-          {file.language && ` · ${file.language}`}
-        </p>
+    <div className="archive-entry">
+      <div className="archive-entry-main">
+        <p className="archive-filename">{file.filename}</p>
+        <div className="archive-meta">
+          <span>{file.status}</span>
+          <span>·</span>
+          <span>{file.chunk_count || 0} chunks</span>
+          {file.language && (
+            <>
+              <span>·</span>
+              <span>{file.language}</span>
+            </>
+          )}
+        </div>
       </div>
       {file.error_message ? (
-        <span
-          style={{
-            flexShrink: 0,
-            borderRadius: 100,
-            border: "1px solid rgba(239,68,68,.2)",
-            background: "rgba(239,68,68,.1)",
-            padding: "3px 10px",
-            fontSize: 10,
-            letterSpacing: ".2em",
-            textTransform: "uppercase",
-            color: "#fca5a5",
-          }}
-        >
-          error
-        </span>
+        <span className="archive-badge archive-badge--err">error</span>
       ) : (
-        <span
-          style={{
-            flexShrink: 0,
-            borderRadius: 100,
-            border: "1px solid rgba(52,211,153,.2)",
-            background: "rgba(52,211,153,.1)",
-            padding: "3px 10px",
-            fontSize: 10,
-            letterSpacing: ".2em",
-            textTransform: "uppercase",
-            color: "#6ee7b7",
-          }}
+        <button
+          className="archive-delete"
+          disabled={deleting}
+          onClick={() => onDelete(file)}
         >
-          ready
-        </span>
+          {deleting ? "Deleting" : "Delete"}
+        </button>
       )}
     </div>
   );
@@ -163,6 +85,7 @@ export default function RAGQA() {
   const [uploading, setUploading] = useState(false);
   const [asking, setAsking] = useState(false);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [topK, setTopK] = useState(4);
@@ -187,7 +110,22 @@ export default function RAGQA() {
   };
 
   useEffect(() => {
-    loadDocuments();
+    async function init() {
+      setLoadingDocs(true);
+
+      try {
+        const res = await ragAPI.listDocuments();
+        setDocuments(res.data || []);
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          setError(err.response?.data?.detail || "Failed to load documents.");
+        }
+      } finally {
+        setLoadingDocs(false);
+      }
+    }
+
+    init();
   }, []);
 
   const handleLogout = () => {
@@ -202,7 +140,7 @@ export default function RAGQA() {
     setSuccess("");
     try {
       await ragAPI.upload(selectedFile);
-      setSuccess(`Uploaded "${selectedFile.name}" successfully.`);
+      setSuccess(`Uploaded "${selectedFile.name}"`);
       setSelectedFile(null);
       await loadDocuments();
     } catch (err) {
@@ -233,6 +171,24 @@ export default function RAGQA() {
     }
   };
 
+  const handleDelete = async (doc) => {
+    if (!doc || deletingId) return;
+    const ok = window.confirm(`Delete "${doc.filename}"?`);
+    if (!ok) return;
+    setDeletingId(doc.id);
+    setError("");
+    setSuccess("");
+    try {
+      await ragAPI.deleteDocument(doc.id);
+      setSuccess(`Deleted "${doc.filename}"`);
+      await loadDocuments();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Delete failed.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -240,162 +196,394 @@ export default function RAGQA() {
     if (f) setSelectedFile(f);
   };
 
+  const kbLangs = [
+    ...new Set(documents.filter((d) => d.language).map((d) => d.language)),
+  ];
+  const kbChunks = documents.reduce((s, d) => s + (d.chunk_count || 0), 0);
+
   return (
     <div className="rag-root">
-      <div className="rag-glow" />
-      <div className="rag-grid" />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body, #root { height: 100%; }
+
+        .rag-root {
+          min-height: 100vh; min-height: 100dvh;
+          background: #13110d;
+          color: #ede3cc;
+          font-family: 'Outfit', sans-serif;
+          font-size: 14px;
+          position: relative;
+          overflow-x: hidden;
+        }
+
+        .rag-root::before {
+          content: "";
+          position: fixed; inset: 0; pointer-events: none;
+          opacity: .03;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          background-size: 220px 220px;
+        }
+
+        .rag-layout {
+          position: relative; z-index: 2;
+          max-width: 1320px; margin: 0 auto;
+          padding: 28px 32px 60px;
+        }
+
+        /* ── Header ── */
+        .rag-header {
+          display: flex; align-items: flex-start;
+          justify-content: space-between; gap: 24px;
+          padding-bottom: 28px; margin-bottom: 34px;
+          border-bottom: 1px solid rgba(210,140,40,.2);
+        }
+        .rag-header-left { max-width: 680px; }
+        .rag-kicker {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+          color: rgba(210,140,40,.7);
+          margin-bottom: 14px;
+        }
+        .rag-title {
+          font-family: 'Instrument Serif', Georgia, serif;
+          font-style: italic; font-weight: 400;
+          font-size: clamp(34px, 5vw, 52px);
+          line-height: 1.08; color: #f0e6ce;
+          margin-bottom: 12px;
+        }
+        .rag-sub {
+          font-size: 14px; line-height: 1.8;
+          color: rgba(237,227,204,.6);
+          max-width: 560px;
+        }
+        .rag-header-nav {
+          display: flex; gap: 6px; flex-shrink: 0;
+          align-items: flex-start; padding-top: 4px;
+        }
+        .nav-btn {
+          display: inline-flex; align-items: center; gap: 5px;
+          font-size: 12px; font-weight: 400;
+          color: rgba(237,227,204,.6);
+          padding: 5px 10px; border-radius: 5px;
+          border: 1px solid rgba(210,140,40,.2);
+          background: transparent;
+          cursor: pointer; text-decoration: none;
+          transition: all .15s;
+          font-family: 'Outfit', sans-serif; letter-spacing: .01em;
+        }
+        .nav-btn:hover {
+          color: rgba(237,227,204,.95);
+          background: rgba(210,140,40,.1);
+          border-color: rgba(210,140,40,.35);
+        }
+        .nav-btn--danger { color: rgba(220,120,90,.7); border-color: rgba(220,120,90,.2); }
+        .nav-btn--danger:hover {
+          color: rgba(230,140,110,.95);
+          background: rgba(200,80,60,.1);
+          border-color: rgba(200,80,60,.3);
+        }
+
+        /* ── Alerts ── */
+        .rag-alert {
+          padding: 12px 16px; margin-bottom: 16px;
+          border-left: 2px solid rgba(210,140,40,.5);
+          background: rgba(210,140,40,.08);
+          color: rgba(237,227,204,.9);
+          font-size: 13px; font-family: 'JetBrains Mono', monospace; letter-spacing: .02em;
+        }
+        .rag-alert--err {
+          border-left-color: rgba(210,90,70,.6);
+          background: rgba(200,80,60,.08);
+          color: rgba(230,150,130,.9);
+        }
+
+        /* ── Main grid ── */
+        .rag-main {
+          display: grid; grid-template-columns: 300px 1fr;
+          gap: 44px; align-items: start;
+        }
+        .rag-sidebar {
+          position: sticky; top: 24px;
+          display: flex; flex-direction: column; gap: 38px;
+        }
+
+        .section-title {
+          display: flex; align-items: center; gap: 8px;
+          margin-bottom: 16px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+          color: rgba(210,140,40,.75);
+        }
+        .d-diamond { color: rgba(210,140,40,.85); font-size: 8px; }
+
+        /* ── Upload zone ── */
+        .upload-zone {
+          border: 1px dashed rgba(210,140,40,.3);
+          background: rgba(210,140,40,.04);
+          padding: 26px 16px; border-radius: 4px;
+          text-align: center; cursor: pointer;
+          transition: all .18s;
+          display: flex; flex-direction: column; align-items: center; gap: 10px;
+          color: rgba(210,140,40,.75);
+        }
+        .upload-zone:hover, .upload-zone--over {
+          border-color: rgba(210,140,40,.6);
+          background: rgba(210,140,40,.08);
+          color: rgba(210,140,40,.95);
+        }
+        .upload-zone-name { font-size: 13px; color: rgba(237,227,204,.9); line-height: 1.5; }
+        .upload-zone-types {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+          color: rgba(210,140,40,.5);
+        }
+        .upload-btn {
+          width: 100%; margin-top: 12px;
+          border: 1px solid rgba(210,140,40,.28);
+          background: rgba(210,140,40,.09);
+          color: rgba(237,227,204,.92);
+          padding: 10px 12px; border-radius: 4px;
+          cursor: pointer; font-size: 12px;
+          font-family: 'Outfit', sans-serif; letter-spacing: .03em;
+          transition: all .15s;
+        }
+        .upload-btn:hover:not(:disabled) {
+          background: rgba(210,140,40,.16);
+          border-color: rgba(210,140,40,.45);
+          color: #f0e6ce;
+        }
+        .upload-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+        /* ── Archive entries ── */
+        .archive-list { display: flex; flex-direction: column; gap: 14px; }
+        .archive-entry {
+          display: flex; align-items: flex-start;
+          justify-content: space-between; gap: 10px;
+          padding-left: 14px;
+          border-left: 1px solid rgba(210,140,40,.3);
+        }
+        .archive-filename {
+          font-size: 13px; color: #ede3cc;
+          line-height: 1.5; margin-bottom: 5px; word-break: break-word;
+        }
+        .archive-meta {
+          display: flex; flex-wrap: wrap; gap: 5px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+          color: rgba(210,140,40,.6);
+        }
+        .archive-badge {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+          flex-shrink: 0; padding: 2px 7px; border-radius: 2px;
+        }
+        .archive-badge--err { color: rgba(220,130,100,.85); border: 1px solid rgba(200,80,60,.3); }
+        .archive-delete {
+          border: none; background: transparent;
+          color: rgba(220,120,90,.65);
+          cursor: pointer; font-size: 10px; letter-spacing: .12em;
+          text-transform: uppercase;
+          font-family: 'JetBrains Mono', monospace;
+          transition: color .15s; flex-shrink: 0;
+        }
+        .archive-delete:hover { color: rgba(230,140,110,.95); }
+        .archive-delete:disabled { opacity: .35; cursor: not-allowed; }
+
+        .kb-stats {
+          margin-top: 20px; padding-top: 16px;
+          border-top: 1px solid rgba(210,140,40,.12);
+        }
+        .kb-stats-title {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+          color: rgba(210,140,40,.6); margin-bottom: 12px;
+        }
+        .kb-stats-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .kb-lang {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+          color: rgba(210,140,40,.8);
+          border: 1px solid rgba(210,140,40,.28); padding: 2px 8px; border-radius: 2px;
+        }
+        .kb-chunks {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9.5px; color: rgba(210,140,40,.5);
+          margin-left: auto; letter-spacing: .05em;
+        }
+
+        /* ── Console ── */
+        .rag-console { min-width: 0; }
+        .console-header {
+          display: flex; justify-content: space-between; align-items: flex-start;
+          gap: 20px; padding-bottom: 18px; margin-bottom: 24px;
+          border-bottom: 1px solid rgba(210,140,40,.14);
+        }
+        .console-title {
+          font-family: 'Instrument Serif', Georgia, serif;
+          font-size: 28px; font-style: italic; font-weight: 400;
+          color: #f0e6ce; margin-bottom: 8px;
+        }
+        .console-desc { font-size: 13px; line-height: 1.7; color: rgba(237,227,204,.6); }
+        .topk-group {
+          display: flex; align-items: center; gap: 10px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+          color: rgba(210,140,40,.65); flex-shrink: 0;
+        }
+        .topk-input {
+          width: 58px; background: transparent; border: none;
+          border-bottom: 1px solid rgba(210,140,40,.3);
+          color: #ede3cc; padding: 5px 2px; outline: none;
+          font-family: 'JetBrains Mono', monospace; font-size: 12px;
+          caret-color: rgba(210,140,40,.8);
+        }
+
+        .question-wrap { margin-bottom: 16px; }
+        .question-textarea {
+          width: 100%; resize: vertical; min-height: 110px;
+          background: transparent; border: none;
+          border-bottom: 1px solid rgba(210,140,40,.25);
+          color: #ede3cc; outline: none;
+          font-size: 15px; line-height: 1.9;
+          font-family: 'Outfit', sans-serif; font-weight: 300;
+          padding: 0 0 12px;
+          caret-color: rgba(210,140,40,.8);
+          transition: border-color .2s;
+        }
+        .question-textarea:focus { border-bottom-color: rgba(210,140,40,.6); }
+        .question-textarea::placeholder { color: rgba(210,140,40,.35); font-style: italic; }
+
+        .ask-btn {
+          border: 1px solid rgba(210,140,40,.28);
+          background: rgba(210,140,40,.09);
+          color: rgba(237,227,204,.92);
+          padding: 10px 18px; border-radius: 4px;
+          cursor: pointer; transition: all .15s;
+          font-size: 12px; font-family: 'Outfit', sans-serif; letter-spacing: .03em;
+        }
+        .ask-btn:hover:not(:disabled) {
+          background: rgba(210,140,40,.16);
+          border-color: rgba(210,140,40,.5);
+          color: #f0e6ce;
+        }
+        .ask-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+        /* ── Response ── */
+        .response-grid {
+          display: grid; grid-template-columns: 1fr 220px;
+          gap: 38px; align-items: start;
+          margin-top: 32px; padding-top: 28px;
+          border-top: 1px solid rgba(210,140,40,.12);
+        }
+        .answer-thread-row { display: flex; gap: 0; animation: fadeSlideIn .3s ease; }
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .answer-marker {
+          width: 28px; flex-shrink: 0;
+          display: flex; flex-direction: column; align-items: center; padding-top: 2px;
+        }
+        .answer-thread-line {
+          width: 1px; flex: 1; margin-top: 6px;
+          background: linear-gradient(to bottom, rgba(210,140,40,.3), transparent);
+          min-height: 80px;
+        }
+        .answer-body {
+          flex: 1; min-width: 0;
+          font-family: 'Instrument Serif', Georgia, serif;
+          font-size: 16px; line-height: 1.95;
+          color: #ede3cc;
+          white-space: pre-wrap; word-break: break-word; padding-left: 8px;
+        }
+        .answer-placeholder { color: rgba(237,227,204,.38); font-style: italic; }
+        .d-diamond--pulse { animation: dpulse 1.5s ease-in-out infinite; }
+        @keyframes dpulse {
+          0%,100% { opacity: .7; }
+          50% { opacity: 1; color: rgba(210,140,40,1); }
+        }
+
+        /* ── Sources ── */
+        .sources-label {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+          color: rgba(210,140,40,.7); margin-bottom: 18px;
+        }
+        .sources-list { display: flex; flex-direction: column; gap: 14px; }
+        .source-entry { padding-left: 12px; border-left: 1px solid rgba(210,140,40,.25); }
+        .source-index {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; color: rgba(210,140,40,.55); margin-bottom: 4px;
+        }
+        .source-name { font-size: 13px; color: rgba(237,227,204,.85); line-height: 1.6; word-break: break-word; }
+        .source-lang {
+          margin-top: 5px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+          color: rgba(210,140,40,.55);
+        }
+        .sources-empty {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: .06em;
+          color: rgba(210,140,40,.4);
+        }
+        .source-langs-row {
+          display: flex; flex-wrap: wrap; gap: 6px;
+          margin-bottom: 14px; padding-bottom: 12px;
+          border-bottom: 1px solid rgba(210,140,40,.1);
+        }
+        .source-lang-tag {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+          color: rgba(210,140,40,.8);
+          border: 1px solid rgba(210,140,40,.28); padding: 2px 8px; border-radius: 2px;
+        }
+
+        @media (max-width: 1000px) { .response-grid { grid-template-columns: 1fr; gap: 28px; } }
+        @media (max-width: 820px) { .rag-main { grid-template-columns: 1fr; gap: 36px; } .rag-sidebar { position: static; } }
+        @media (max-width: 640px) {
+          .rag-layout { padding: 18px 16px 40px; }
+          .rag-header { flex-direction: column; align-items: flex-start; }
+          .rag-header-nav { width: 100%; }
+          .nav-btn { flex: 1; justify-content: center; }
+          .rag-title { font-size: 36px; }
+          .console-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+        }
+      `}</style>
 
       <div className="rag-layout">
-        {/* ── Header ── */}
         <header className="rag-header">
-          <div className="rag-hdr-left">
-            <div className="rag-hdr-icon">
-              <SparkleIcon size={13} />
-            </div>
-            <div>
-              <p className="rag-hdr-kicker">Knowledge base</p>
-              <h1 className="rag-hdr-title">RAG Q&A</h1>
-            </div>
+          <div className="rag-header-left">
+            <p className="rag-kicker">Retrieval archive · operational memory</p>
+            <h1 className="rag-title">Research & retrieval console</h1>
+            <p className="rag-sub">
+              Upload source material, index technical documents, and interrogate
+              your knowledge archive through retrieval-augmented generation.
+            </p>
           </div>
-          <p className="rag-hdr-desc">
-            Upload code files, PDFs, or markdown documents, then ask questions
-            about your codebase using AI-powered retrieval.
-          </p>
-          <div className="rag-hdr-actions">
-            <Link to="/chat" className="rag-btn ghost">
-              ← Back to chat
+          <nav className="rag-header-nav">
+            <Link to="/chat" className="nav-btn">
+              ← Chat
             </Link>
-            <button onClick={handleLogout} className="rag-btn danger">
-              Sign out
+            <button className="nav-btn nav-btn--danger" onClick={handleLogout}>
+              <IconLogout /> Sign out
             </button>
-          </div>
+          </nav>
         </header>
 
-        {/* ── Alerts ── */}
-        {(error || success) && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              marginBottom: 20,
-            }}
-          >
-            {error && <div className="alert alert-error">{error}</div>}
-            {success && <div className="alert alert-success">{success}</div>}
-          </div>
-        )}
+        {error && <div className="rag-alert rag-alert--err">{error}</div>}
+        {success && <div className="rag-alert">{success}</div>}
 
-        {/* ── Features info ── */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              borderRadius: 12,
-              border: "1px solid rgba(99,102,241,.2)",
-              background: "rgba(99,102,241,.08)",
-              padding: "12px 14px",
-              fontSize: 12,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 6,
-                color: "#a5b4fc",
-                fontWeight: 600,
-              }}
-            >
-              <CodeIcon />
-              Code-Aware
-            </div>
-            <p style={{ color: "rgba(255,255,255,.5)", lineHeight: 1.4 }}>
-              Detects programming languages automatically
-            </p>
-          </div>
-          <div
-            style={{
-              borderRadius: 12,
-              border: "1px solid rgba(34,211,238,.2)",
-              background: "rgba(34,211,238,.08)",
-              padding: "12px 14px",
-              fontSize: 12,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 6,
-                color: "#06b6d4",
-                fontWeight: 600,
-              }}
-            >
-              ⚡
-              Multi-Language
-            </div>
-            <p style={{ color: "rgba(255,255,255,.5)", lineHeight: 1.4 }}>
-              Query across Python, JS, TS, Go, Rust & more
-            </p>
-          </div>
-          <div
-            style={{
-              borderRadius: 12,
-              border: "1px solid rgba(124,58,237,.2)",
-              background: "rgba(124,58,237,.08)",
-              padding: "12px 14px",
-              fontSize: 12,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 6,
-                color: "#c4b5fd",
-                fontWeight: 600,
-              }}
-            >
-              🧠
-              AI-Powered
-            </div>
-            <p style={{ color: "rgba(255,255,255,.5)", lineHeight: 1.4 }}>
-              Gemini LLM understands code context
-            </p>
-          </div>
-        </div>
-
-        {/* ── Main grid ── */}
         <div className="rag-main">
-          {/* Left sidebar */}
           <aside className="rag-sidebar">
-            {/* Upload card */}
-            <div className="rag-card">
-              <div className="rag-card-hdr">
-                <div>
-                  <h2 className="rag-card-title">Upload document</h2>
-                  <p className="rag-card-sub">
-                    PDF, Markdown, code files, or plain text.
-                  </p>
-                </div>
-                {uploading && (
-                  <span className="badge badge-indigo">Uploading</span>
-                )}
+            <section>
+              <div className="section-title">
+                <Diamond /> Archive intake
               </div>
-
-              {/* Drop zone */}
               <label
-                className={`drop-zone ${dragOver ? "drop-zone--over" : ""}`}
+                className={`upload-zone ${dragOver ? "upload-zone--over" : ""}`}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setDragOver(true);
@@ -405,141 +593,84 @@ export default function RAGQA() {
               >
                 <input
                   type="file"
-                  accept=".pdf,.txt,.md,.markdown,.py,.js,.ts,.jsx,.tsx,.java,.go,.cpp,.rs,.rb,.php,.cs,.swift,.kt,.sql,.yaml,.json,.xml,.html,.css,.lua,.dart,.groovy,.r"
                   style={{ display: "none" }}
+                  accept=".pdf,.txt,.md,.markdown,.py,.js,.ts,.jsx,.tsx,.java,.go,.cpp,.rs,.rb,.php,.cs,.swift,.kt,.sql,.yaml,.json,.xml,.html,.css,.lua,.dart,.groovy,.r"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 />
                 <UploadIcon />
-                <span className="drop-zone-title">
-                  {selectedFile ? selectedFile.name : "Choose or drop a file"}
+                <span className="upload-zone-name">
+                  {selectedFile ? selectedFile.name : "Drop document or browse"}
                 </span>
-                <span className="drop-zone-sub">
-                  Click to browse · PDF, Markdown, Code, TXT
+                <span className="upload-zone-types">
+                  PDF · Markdown · Source · Text
                 </span>
               </label>
-
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile || uploading}
-                className="rag-submit-btn cyan-btn"
+                className="upload-btn"
               >
-                {uploading ? "Uploading…" : "Upload to knowledge base"}
+                {uploading ? "Uploading..." : "Index into archive"}
               </button>
-            </div>
+            </section>
 
-            {/* Documents list */}
-            <div className="rag-card">
-              <div className="rag-card-hdr">
-                <div>
-                  <h2 className="rag-card-title">Uploaded documents</h2>
-                  <p className="rag-card-sub">
-                    Currently indexed for this account.
-                  </p>
-                </div>
-                {loadingDocs && <div className="spinner" />}
-              </div>
-              <div
-                style={{
-                  marginTop: 14,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                {documents.length === 0 && !loadingDocs ? (
-                  <div className="empty-state">No documents uploaded yet.</div>
-                ) : (
-                  documents.map((doc) => <FilePill key={doc.id} file={doc} />)
+            <section>
+              <div className="section-title">
+                <Diamond /> Indexed dossiers
+                {loadingDocs && (
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      fontSize: 10,
+                      color: "rgba(210,140,40,.55)",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      letterSpacing: ".08em",
+                    }}
+                  >
+                    Loading...
+                  </span>
                 )}
               </div>
-
-              {documents.length > 0 && (
-                <div
-                  style={{
-                    marginTop: 18,
-                    paddingTop: 14,
-                    borderTop: "1px solid rgba(255,255,255,.07)",
-                  }}
-                >
-                  <h3
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: ".3em",
-                      color: "rgba(255,255,255,.45)",
-                      marginBottom: 12,
-                    }}
-                  >
-                    Knowledge Base
-                  </h3>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 8,
-                    }}
-                  >
-                    {(() => {
-                      const langs = new Set(
-                        documents
-                          .filter((d) => d.language)
-                          .map((d) => d.language)
-                      );
-                      const chunkTotal = documents.reduce(
-                        (sum, d) => sum + (d.chunk_count || 0),
-                        0
-                      );
-                      return (
-                        <>
-                          {Array.from(langs).map((lang) => (
-                            <span
-                              key={lang}
-                              style={{
-                                fontSize: 11,
-                                borderRadius: 6,
-                                border: "1px solid rgba(99,102,241,.3)",
-                                background: "rgba(99,102,241,.15)",
-                                padding: "4px 10px",
-                                color: "#a5b4fc",
-                                fontWeight: 500,
-                                letterSpacing: ".2em",
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              {lang}
-                            </span>
-                          ))}
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: "rgba(255,255,255,.4)",
-                              marginLeft: "auto",
-                              display: "flex",
-                              alignItems: "center",
-                            }}
-                          >
-                            {chunkTotal} chunks
-                          </span>
-                        </>
-                      );
-                    })()}
+              <div className="archive-list">
+                {documents.length === 0 && !loadingDocs ? (
+                  <div className="archive-meta">No indexed documents.</div>
+                ) : (
+                  documents.map((doc) => (
+                    <FileEntry
+                      key={doc.id}
+                      file={doc}
+                      deleting={deletingId === doc.id}
+                      onDelete={handleDelete}
+                    />
+                  ))
+                )}
+              </div>
+              {kbLangs.length > 0 && (
+                <div className="kb-stats">
+                  <div className="kb-stats-title">Knowledge base</div>
+                  <div className="kb-stats-row">
+                    {kbLangs.map((lang) => (
+                      <span key={lang} className="kb-lang">
+                        {lang}
+                      </span>
+                    ))}
+                    <span className="kb-chunks">{kbChunks} chunks</span>
                   </div>
                 </div>
               )}
-            </div>
+            </section>
           </aside>
 
-          {/* Right — Q&A */}
-          <section className="rag-card rag-qa">
-            <div className="rag-qa-hdr">
+          <section className="rag-console">
+            <div className="console-header">
               <div>
-                <h2 className="rag-card-title">Ask a question</h2>
-                <p className="rag-card-sub">
-                  Code-aware queries powered by Gemini AI using your knowledge base.
+                <h2 className="console-title">Ask the archive</h2>
+                <p className="console-desc">
+                  Query indexed knowledge sources using semantic retrieval and
+                  AI synthesis.
                 </p>
               </div>
-              <label className="topk-label">
+              <label className="topk-group">
                 Top K
                 <input
                   type="number"
@@ -552,347 +683,82 @@ export default function RAGQA() {
               </label>
             </div>
 
-            <div
-              style={{
-                marginTop: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}
-            >
-              <div className="field">
-                <label className="field-label">Question</label>
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  rows={4}
-                  placeholder="Ask anything about your code and documents…"
-                  className="rag-textarea"
-                />
-              </div>
+            <div className="question-wrap">
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="What does the authentication pipeline do? How are embeddings generated? Explain the ingestion flow..."
+                className="question-textarea"
+              />
+              <button
+                onClick={handleQuery}
+                disabled={!canAsk}
+                className="ask-btn"
+              >
+                {asking ? "Generating response..." : "Query archive"}
+              </button>
+            </div>
 
-              <div>
-                <button
-                  onClick={handleQuery}
-                  disabled={!canAsk}
-                  className="rag-submit-btn violet-btn"
-                >
-                  {asking ? (
-                    <>
-                      <div className="spinner spinner-inline" />
-                      Thinking…
-                    </>
-                  ) : (
-                    "Ask question"
-                  )}
-                </button>
-              </div>
-
-              {/* Answer + Sources */}
-              <div className="qa-results">
-                <div className="qa-answer-wrap">
-                  <div className="qa-section-hdr">
-                    <span className="qa-section-title">Answer</span>
-                    {asking && (
-                      <span
-                        style={{
-                          fontSize: 11.5,
-                          color: "rgba(255,255,255,.35)",
-                        }}
-                      >
-                        Generating…
-                      </span>
-                    )}
-                  </div>
-                  <div className="qa-answer-box">
-                    {answer || (
-                      <span style={{ color: "rgba(255,255,255,.3)" }}>
-                        Your answer will appear here after you ask a question.
-                      </span>
-                    )}
-                  </div>
+            <div className="response-grid">
+              <div className="answer-thread-row">
+                <div className="answer-marker">
+                  <span
+                    className={`d-diamond${asking ? " d-diamond--pulse" : ""}`}
+                  >
+                    ◆
+                  </span>
+                  <div className="answer-thread-line" />
                 </div>
+                <div className="answer-body">
+                  {answer ? (
+                    answer
+                  ) : (
+                    <span className="answer-placeholder">
+                      The archive response will appear here.
+                    </span>
+                  )}
+                </div>
+              </div>
 
-                <div className="qa-sources-wrap">
-                  <div className="qa-section-hdr">
-                    <span className="qa-section-title">Sources</span>
-                    {sources.length > 0 && (
-                      <span
-                        style={{
-                          fontSize: 10.5,
-                          color: "rgba(255,255,255,.4)",
-                        }}
-                      >
-                        {sources.length} result{sources.length !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-
-                  {sources.length > 0 && (
-                    <div
-                      style={{
-                        marginBottom: 12,
-                        paddingBottom: 10,
-                        borderBottom: "1px solid rgba(255,255,255,.07)",
-                        display: "flex",
-                        gap: 6,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {(() => {
-                        const langs = new Set(
-                          sourceLanguages.filter((l) => l)
-                        );
-                        return Array.from(langs).map((lang) => (
-                          <span
-                            key={lang}
-                            style={{
-                              fontSize: 10,
-                              borderRadius: 5,
-                              border: "1px solid rgba(99,102,241,.3)",
-                              background: "rgba(99,102,241,.15)",
-                              padding: "2px 8px",
-                              color: "#a5b4fc",
-                              fontWeight: 500,
-                              letterSpacing: ".15em",
-                              textTransform: "uppercase",
-                            }}
-                          >
+              <aside>
+                <div className="sources-label">Source citations</div>
+                {sources.length > 0 &&
+                  (() => {
+                    const langs = [...new Set(sourceLanguages.filter(Boolean))];
+                    return langs.length > 0 ? (
+                      <div className="source-langs-row">
+                        {langs.map((lang) => (
+                          <span key={lang} className="source-lang-tag">
                             {lang}
                           </span>
-                        ));
-                      })()}
-                    </div>
-                  )}
-
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                  >
-                    {sources.length === 0 ? (
-                      <div className="empty-state">
-                        Sources will appear here.
+                        ))}
                       </div>
-                    ) : (
-                      sources.map((src, idx) => (
-                        <div
-                          key={src}
-                          style={{
-                            borderRadius: 10,
-                            border: "1px solid rgba(255,255,255,.08)",
-                            background: "rgba(0,0,0,.3)",
-                            padding: "10px 12px",
-                            fontSize: 13,
-                            color: "rgba(255,255,255,.72)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 8,
-                          }}
-                        >
-                          <span>{src}</span>
-                          {sourceLanguages[idx] && (
-                            <LanguageBadge language={sourceLanguages[idx]} />
-                          )}
+                    ) : null;
+                  })()}
+                <div className="sources-list">
+                  {sources.length === 0 ? (
+                    <div className="sources-empty">No citations yet.</div>
+                  ) : (
+                    sources.map((src, idx) => (
+                      <div key={src + idx} className="source-entry">
+                        <div className="source-index">
+                          [{String(idx + 1).padStart(2, "0")}]
                         </div>
-                      ))
-                    )}
-                  </div>
+                        <div className="source-name">{src}</div>
+                        {sourceLanguages[idx] && (
+                          <div className="source-lang">
+                            {sourceLanguages[idx]}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
-              </div>
+              </aside>
             </div>
           </section>
         </div>
       </div>
-
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        .rag-root {
-          min-height: 100vh; min-height: 100dvh;
-          background: #08090d; color: white;
-          font-family: 'Sora','DM Sans',ui-sans-serif; font-size: 14px;
-          position: relative;
-        }
-        .rag-glow {
-          position: fixed; inset: 0; pointer-events: none;
-          background: radial-gradient(ellipse 60% 45% at 5% 0%,rgba(59,130,246,.1) 0%,transparent 55%),
-                      radial-gradient(ellipse 50% 40% at 95% 100%,rgba(14,165,233,.08) 0%,transparent 55%);
-        }
-        .rag-grid {
-          position: fixed; inset: 0; pointer-events: none;
-          background-image: linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
-                            linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
-          background-size: 56px 56px; opacity: .35;
-        }
-        .rag-layout {
-          position: relative; z-index: 1;
-          max-width: 1280px; margin: 0 auto;
-          padding: 28px 28px 40px;
-          min-height: 100vh;
-        }
-
-        /* Header */
-        .rag-header {
-          display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-          border-radius: 20px; border: 1px solid rgba(255,255,255,.08);
-          background: rgba(255,255,255,.03); backdrop-filter: blur(20px);
-          padding: 18px 22px; margin-bottom: 24px;
-        }
-        .rag-hdr-left { display: flex; align-items: center; gap: 12px; }
-        .rag-hdr-icon {
-          width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
-          background: linear-gradient(135deg,rgba(124,58,237,.25),rgba(99,102,241,.15));
-          border: 1px solid rgba(124,58,237,.25);
-          display: flex; align-items: center; justify-content: center; color: #a78bfa;
-        }
-        .rag-hdr-kicker { font-size: 10.5px; letter-spacing: .35em; text-transform: uppercase; color: rgba(34,211,238,.7); margin-bottom: 3px; }
-        .rag-hdr-title { font-size: 22px; font-weight: 600; color: white; line-height: 1; }
-        .rag-hdr-desc { flex: 1; font-size: 13px; color: rgba(255,255,255,.45); line-height: 1.6; min-width: 180px; }
-        .rag-hdr-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-        .rag-btn {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 12.5px; font-weight: 500; padding: 7px 14px; border-radius: 10px;
-          border: 1px solid rgba(255,255,255,.08); background: transparent;
-          cursor: pointer; text-decoration: none; transition: all .15s; font-family: inherit;
-        }
-        .rag-btn.ghost { color: rgba(255,255,255,.55); }
-        .rag-btn.ghost:hover { color: rgba(255,255,255,.9); background: rgba(255,255,255,.05); }
-        .rag-btn.danger { color: rgba(252,165,165,.8); border-color: rgba(239,68,68,.2); }
-        .rag-btn.danger:hover { color: #fca5a5; background: rgba(239,68,68,.08); }
-
-        /* Alerts */
-        .alert { border-radius: 14px; padding: 11px 15px; font-size: 13px; }
-        .alert-error { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2); color: #fca5a5; }
-        .alert-success { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.2); color: #6ee7b7; }
-
-        /* Main grid */
-        .rag-main {
-          display: grid; grid-template-columns: 340px 1fr; gap: 20px;
-          align-items: start;
-        }
-        .rag-sidebar { display: flex; flex-direction: column; gap: 16px; }
-
-        /* Cards */
-        .rag-card {
-          border-radius: 20px; border: 1px solid rgba(255,255,255,.08);
-          background: rgba(12,14,20,.92); padding: 22px;
-          backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(0,0,0,.3);
-        }
-        .rag-card-hdr { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
-        .rag-card-title { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; }
-        .rag-card-sub { font-size: 12.5px; color: rgba(255,255,255,.38); line-height: 1.5; }
-
-        /* Badge */
-        .badge { flex-shrink: 0; border-radius: 100px; padding: 3px 10px; font-size: 10px; letter-spacing: .25em; text-transform: uppercase; }
-        .badge-indigo { border: 1px solid rgba(99,102,241,.25); background: rgba(99,102,241,.12); color: #a5b4fc; }
-
-        /* Drop zone */
-        .drop-zone {
-          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-          border-radius: 14px; border: 1.5px dashed rgba(255,255,255,.14);
-          background: rgba(255,255,255,.02); padding: 28px 16px; cursor: pointer;
-          text-align: center; transition: all .2s; margin-bottom: 14px;
-          color: rgba(255,255,255,.4);
-        }
-        .drop-zone:hover, .drop-zone--over { border-color: rgba(34,211,238,.4); background: rgba(34,211,238,.04); color: rgba(255,255,255,.7); }
-        .drop-zone-title { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.8); }
-        .drop-zone-sub { font-size: 11.5px; color: rgba(255,255,255,.3); }
-
-        /* Submit buttons */
-        .rag-submit-btn {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          width: 100%; padding: 12px; border-radius: 14px; border: none;
-          font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer;
-          transition: filter .2s, opacity .2s;
-        }
-        .rag-submit-btn:disabled { cursor: not-allowed; opacity: .5; }
-        .rag-submit-btn:not(:disabled):hover { filter: brightness(1.08); }
-        .cyan-btn { background: linear-gradient(135deg,#06b6d4,#3b82f6); color: #f0f9ff; }
-        .violet-btn { background: linear-gradient(135deg,#7c3aed,#6366f1); color: white; }
-
-        /* Empty state */
-        .empty-state {
-          border-radius: 12px; border: 1px solid rgba(255,255,255,.07);
-          background: rgba(255,255,255,.02); padding: 16px; font-size: 13px;
-          color: rgba(255,255,255,.3); text-align: center;
-        }
-
-        /* Spinner */
-        .spinner {
-          width: 16px; height: 16px; border-radius: 50%;
-          border: 2px solid rgba(255,255,255,.15); border-top-color: #22d3ee;
-          animation: spin .7s linear infinite; flex-shrink: 0;
-        }
-        .spinner-inline { display: inline-block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Q&A section */
-        .rag-qa { }
-        .rag-qa-hdr {
-          display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-          flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.07);
-          margin-bottom: 4px;
-        }
-        .topk-label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: rgba(255,255,255,.5); flex-shrink: 0; }
-        .topk-input {
-          width: 68px; border-radius: 10px; border: 1px solid rgba(255,255,255,.1);
-          background: rgba(255,255,255,.04); padding: 8px 12px;
-          font-size: 13px; color: white; outline: none; font-family: inherit;
-          transition: border-color .2s;
-        }
-        .topk-input:focus { border-color: rgba(124,58,237,.4); }
-
-        /* Fields */
-        .field { display: flex; flex-direction: column; gap: 8px; }
-        .field-label { font-size: 11px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; color: rgba(255,255,255,.38); }
-        .rag-textarea {
-          width: 100%; resize: vertical; border-radius: 14px;
-          border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
-          padding: 12px 14px; font-size: 13.5px; color: white;
-          placeholder-color: rgba(255,255,255,.25); outline: none;
-          transition: border-color .2s; line-height: 1.6; font-family: inherit;
-          min-height: 100px;
-        }
-        .rag-textarea::placeholder { color: rgba(255,255,255,.25); }
-        .rag-textarea:focus { border-color: rgba(124,58,237,.4); background: rgba(255,255,255,.05); }
-
-        /* Results */
-        .qa-results { display: grid; grid-template-columns: 1fr 240px; gap: 14px; margin-top: 4px; }
-        .qa-answer-wrap, .qa-sources-wrap {
-          border-radius: 16px; border: 1px solid rgba(255,255,255,.08);
-          background: rgba(255,255,255,.025); padding: 16px;
-        }
-        .qa-section-hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
-        .qa-section-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.85); }
-        .qa-answer-box {
-          min-height: 200px; border-radius: 12px; border: 1px solid rgba(255,255,255,.07);
-          background: rgba(0,0,0,.3); padding: 14px 16px;
-          font-size: 13.5px; line-height: 1.75; color: rgba(255,255,255,.82);
-          white-space: pre-wrap; word-break: break-word;
-        }
-
-        /* ── Responsive ── */
-        @media (max-width: 1100px) {
-          .qa-results { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 900px) {
-          .rag-main { grid-template-columns: 1fr; }
-          .rag-sidebar { flex-direction: row; flex-wrap: wrap; }
-          .rag-sidebar > * { flex: 1; min-width: 280px; }
-        }
-        @media (max-width: 640px) {
-          .rag-layout { padding: 16px 14px 32px; }
-          .rag-header { padding: 14px 16px; gap: 10px; }
-          .rag-hdr-desc { display: none; }
-          .rag-hdr-title { font-size: 18px; }
-          .rag-card { padding: 16px; }
-          .rag-sidebar { flex-direction: column; }
-        }
-        @media (max-width: 420px) {
-          .rag-hdr-kicker { display: none; }
-          .rag-btn { padding: 6px 10px; font-size: 12px; }
-        }
-      `}</style>
     </div>
   );
 }

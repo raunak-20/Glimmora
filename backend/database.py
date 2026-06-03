@@ -1,43 +1,37 @@
 """
-Database configuration — SQLite via SQLAlchemy (sync + async-compatible).
-Swap DATABASE_URL for PostgreSQL / MySQL in production.
+Database configuration — PostgreSQL via SQLAlchemy.
 """
 
 import os
+from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 # ---------------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------------
 
-DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./ai_saas.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
+
+if not DATABASE_URL.startswith("postgresql"):
+    raise RuntimeError("DATABASE_URL must be a PostgreSQL connection string")
 
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
 
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    # Required for SQLite to work properly with FastAPI's thread-pool
-    connect_args["check_same_thread"] = False
-
 engine = create_engine(
     DATABASE_URL,
-    connect_args=connect_args,
     echo=os.getenv("SQL_ECHO", "false").lower() == "true",
     pool_pre_ping=True,
 )
-
-# Enable WAL mode for SQLite (better concurrent read performance)
-if DATABASE_URL.startswith("sqlite"):
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
 
 # ---------------------------------------------------------------------------
 # Session factory

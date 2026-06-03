@@ -4,13 +4,13 @@ Production-ready REST API with **JWT auth**, **OpenAI chat**, and **LangChain + 
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | FastAPI |
-| Database | SQLite → SQLAlchemy 2.x |
-| Auth | JWT (HS256) · bcrypt |
-| Chat | OpenAI Chat Completions |
-| RAG | LangChain · OpenAI Embeddings · FAISS |
+| Layer     | Technology                            |
+| --------- | ------------------------------------- |
+| Framework | FastAPI                               |
+| Database  | SQLite → SQLAlchemy 2.x               |
+| Auth      | JWT (HS256) · bcrypt                  |
+| Chat      | Gemini Chat Completions               |
+| RAG       | LangChain · OpenAI Embeddings · FAISS |
 
 ## Project Layout
 
@@ -50,31 +50,34 @@ uvicorn main:app --reload
 
 ## API Overview
 
-### Auth  `/api/v1/auth`
-| Method | Path | Description |
-|---|---|---|
-| POST | `/register` | Create account |
-| POST | `/login` | OAuth2 password flow → token pair |
-| POST | `/refresh` | Exchange refresh token |
-| GET | `/me` | Current user profile |
-| PATCH | `/me/password` | Change password |
+### Auth `/api/v1/auth`
 
-### Chat  `/api/v1/chat`
-| Method | Path | Description |
-|---|---|---|
-| POST | `/send` | Send message, receive AI reply |
-| POST | `/send/stream` | SSE streaming reply |
-| GET | `/history` | Conversation history |
-| DELETE | `/history` | Clear history |
+| Method | Path           | Description                       |
+| ------ | -------------- | --------------------------------- |
+| POST   | `/register`    | Create account                    |
+| POST   | `/login`       | OAuth2 password flow → token pair |
+| POST   | `/refresh`     | Exchange refresh token            |
+| GET    | `/me`          | Current user profile              |
+| PATCH  | `/me/password` | Change password                   |
 
-### RAG  `/api/v1/rag`
-| Method | Path | Description |
-|---|---|---|
-| POST | `/documents` | Upload + ingest document (PDF/TXT/MD) |
-| GET | `/documents` | List ingested documents |
-| DELETE | `/documents` | Wipe all documents + vector store |
-| DELETE | `/documents/{id}` | Delete single document record |
-| POST | `/query` | RAG question answering |
+### Chat `/api/v1/chat`
+
+| Method | Path           | Description                    |
+| ------ | -------------- | ------------------------------ |
+| POST   | `/send`        | Send message, receive AI reply |
+| POST   | `/send/stream` | SSE streaming reply            |
+| GET    | `/history`     | Conversation history           |
+| DELETE | `/history`     | Clear history                  |
+
+### RAG `/api/v1/rag`
+
+| Method | Path              | Description                           |
+| ------ | ----------------- | ------------------------------------- |
+| POST   | `/documents`      | Upload + ingest document (PDF/TXT/MD) |
+| GET    | `/documents`      | List ingested documents               |
+| DELETE | `/documents`      | Wipe all documents + vector store     |
+| DELETE | `/documents/{id}` | Delete single document record         |
+| POST   | `/query`          | RAG question answering                |
 
 ## Production Checklist
 

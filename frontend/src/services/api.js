@@ -49,6 +49,9 @@ export const authAPI = {
     const { access_token, refresh_token } = response.data;
     localStorage.setItem("access_token", access_token);
     localStorage.setItem("refresh_token", refresh_token);
+    localStorage.removeItem("chat_messages");
+    const me = await api.get("/auth/me");
+    localStorage.setItem("user", JSON.stringify(me.data));
     return response;
   },
   me: () => api.get("/auth/me"),

@@ -6,7 +6,6 @@ Accepts a message + history, calls Gemini, returns the reply.
 from typing import Any
 import os
 
-import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -15,17 +14,14 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
 from services.auth_service import get_current_user
+from services.gemini_client import generate_gemini_content
 
 # Load environment variables
 load_dotenv()
 
 # Gemini setup
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
-
-genai.configure(api_key=GEMINI_API_KEY)
-
-model = genai.GenerativeModel(GEMINI_MODEL)
+GEMINI_MODEL = os.getenv("GEMINI_MODEL")
 
 
 # Router
@@ -87,7 +83,7 @@ async def chat(
     final_prompt = "\n".join(prompt_parts)
 
     try:
-        response = model.generate_content(final_prompt)
+        response = generate_gemini_content(final_prompt, model=GEMINI_MODEL)
         reply = response.text
         tokens_used = 0
         # Extract token usage safely

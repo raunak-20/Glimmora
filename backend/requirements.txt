@@ -5,6 +5,7 @@ uvicorn[standard]>=0.29.0
 
 # Database
 sqlalchemy>=2.0.0
+psycopg[binary]>=3.2.0
 
 # Auth
 python-jose[cryptography]>=3.3.0
@@ -15,7 +16,7 @@ python-multipart>=0.0.9      # OAuth2 form parsing
 langchain>=0.2.0
 langchain-community>=0.2.0
 langchain-openai>=0.1.0
-google-generativeai
+google-genai>=1.0.0
 faiss-cpu>=1.8.0
 pypdf>=4.0.0
 unstructured>=0.13.0         # Markdown loader

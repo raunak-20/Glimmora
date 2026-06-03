@@ -3,8 +3,57 @@ import { useNavigate, Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism/index.js";
 import { chatAPI, authAPI } from "../services/api";
+
+// ── Syntax theme — warm amber ──────────────────────────────────
+const dispatchTheme = {
+  'code[class*="language-"]': {
+    color: "#d8ccb4",
+    background: "none",
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "12px",
+    lineHeight: "1.75",
+  },
+  'pre[class*="language-"]': {
+    color: "#d8ccb4",
+    background: "rgba(0,0,0,.5)",
+    padding: "14px 16px",
+    borderRadius: "6px",
+    overflow: "auto",
+  },
+  comment: { color: "rgba(210,140,40,.45)", fontStyle: "italic" },
+  prolog: { color: "rgba(210,140,40,.45)" },
+  doctype: { color: "rgba(210,140,40,.45)" },
+  cdata: { color: "rgba(210,140,40,.45)" },
+  punctuation: { color: "rgba(220,205,175,.5)" },
+  property: { color: "#d4904a" },
+  tag: { color: "#d4904a" },
+  boolean: { color: "#d4904a" },
+  number: { color: "#d4904a" },
+  constant: { color: "#d4904a" },
+  symbol: { color: "#d4904a" },
+  deleted: { color: "#c06858" },
+  selector: { color: "#9ab870" },
+  "attr-name": { color: "#9ab870" },
+  string: { color: "#9ab870" },
+  char: { color: "#9ab870" },
+  builtin: { color: "#9ab870" },
+  inserted: { color: "#9ab870" },
+  operator: { color: "rgba(220,205,175,.65)" },
+  entity: { color: "#d4904a", cursor: "help" },
+  url: { color: "#d4904a" },
+  variable: { color: "#ede3cc" },
+  atrule: { color: "#c87820", fontStyle: "italic" },
+  "attr-value": { color: "#9ab870" },
+  function: { color: "#ede3cc" },
+  "class-name": { color: "#ede3cc" },
+  keyword: { color: "#c87820", fontStyle: "italic" },
+  regex: { color: "#9ab870" },
+  important: { color: "#c87820", fontWeight: "bold" },
+  bold: { fontWeight: "bold" },
+  italic: { fontStyle: "italic" },
+  namespace: { opacity: ".7" },
+};
 
 const INITIAL_MESSAGE = {
   id: crypto.randomUUID(),
@@ -13,58 +62,34 @@ const INITIAL_MESSAGE = {
 };
 const SYSTEM_PROMPT = "You are a helpful, concise AI assistant.";
 
-// ── Icons ──────────────────────────────────────────────────────────────────
-function SparkleIcon({ size = 14 }) {
+function IconSend() {
   return (
     <svg
-      width={size}
-      height={size}
+      width={14}
+      height={14}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.6}
+      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+      <path d="M5 12h14M12 5l7 7-7 7" />
     </svg>
   );
 }
-function UserIcon({ size = 12 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-    </svg>
-  );
-}
-function SendIcon() {
-  return (
-    <svg
-      width={15}
-      height={15}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-    </svg>
-  );
-}
-function StopIcon() {
+function IconStop() {
   return (
     <svg width={10} height={10} viewBox="0 0 24 24" fill="currentColor">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <rect x="4" y="4" width="16" height="16" rx="3" />
     </svg>
   );
 }
-function CopyIcon() {
+function IconCopy() {
   return (
     <svg
-      width={12}
-      height={12}
+      width={11}
+      height={11}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -72,15 +97,16 @@ function CopyIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 10h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
     </svg>
   );
 }
-function CheckIcon() {
+function IconCheck() {
   return (
     <svg
-      width={12}
-      height={12}
+      width={11}
+      height={11}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -92,11 +118,11 @@ function CheckIcon() {
     </svg>
   );
 }
-function TrashIcon() {
+function IconTrash() {
   return (
     <svg
-      width={13}
-      height={13}
+      width={12}
+      height={12}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -108,11 +134,11 @@ function TrashIcon() {
     </svg>
   );
 }
-function LogoutIcon() {
+function IconLogout() {
   return (
     <svg
-      width={13}
-      height={13}
+      width={12}
+      height={12}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -124,37 +150,23 @@ function LogoutIcon() {
     </svg>
   );
 }
-
-// ── Avatar ─────────────────────────────────────────────────────────────────
-function Avatar({ role }) {
-  const isUser = role === "user";
+function IconEdit() {
   return (
-    <div
-      style={{
-        width: 28,
-        height: 28,
-        minWidth: 28,
-        minHeight: 28,
-        borderRadius: 8,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        background: isUser
-          ? "linear-gradient(135deg,rgba(52,211,153,.2),rgba(20,184,166,.15))"
-          : "linear-gradient(135deg,rgba(167,139,250,.2),rgba(99,102,241,.15))",
-        border: isUser
-          ? "1px solid rgba(52,211,153,.25)"
-          : "1px solid rgba(167,139,250,.25)",
-        color: isUser ? "#6ee7b7" : "#c4b5fd",
-      }}
+    <svg
+      width={12}
+      height={12}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      {isUser ? <UserIcon size={12} /> : <SparkleIcon size={12} />}
-    </div>
+      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
   );
 }
 
-// ── Markdown ───────────────────────────────────────────────────────────────
 function MarkdownRenderer({ content }) {
   return (
     <ReactMarkdown
@@ -167,16 +179,19 @@ function MarkdownRenderer({ content }) {
             return (
               <SyntaxHighlighter
                 language={match[1]}
-                style={oneDark}
+                style={dispatchTheme}
                 customStyle={{
-                  borderRadius: 10,
-                  margin: "10px 0",
-                  padding: 14,
-                  fontSize: 12.5,
+                  borderRadius: 6,
+                  margin: "12px 0",
+                  padding: "14px 16px",
+                  fontSize: 12,
                   background: "rgba(0,0,0,.5)",
-                  border: "1px solid rgba(255,255,255,.08)",
+                  border: "1px solid rgba(210,140,40,.15)",
                   overflowX: "auto",
-                  textAlign: "left",
+                  boxShadow: "none",
+                }}
+                codeTagProps={{
+                  style: { fontFamily: "'JetBrains Mono', monospace" },
                 }}
               >
                 {String(children).replace(/\n$/, "")}
@@ -185,13 +200,12 @@ function MarkdownRenderer({ content }) {
           return (
             <code
               style={{
-                background: "rgba(255,255,255,.08)",
-                color: "#f9a8d4",
-                padding: "2px 6px",
-                borderRadius: 5,
-                fontSize: 12.5,
-                fontFamily: "'JetBrains Mono',monospace",
-                wordBreak: "break-all",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "11.5px",
+                color: "rgba(210,140,40,.95)",
+                background: "transparent",
+                borderBottom: "1px dashed rgba(210,140,40,.4)",
+                paddingBottom: "1px",
               }}
             >
               {children}
@@ -202,11 +216,10 @@ function MarkdownRenderer({ content }) {
           return (
             <p
               style={{
-                margin: "0 0 10px",
-                lineHeight: 1.75,
-                color: "rgba(255,255,255,.88)",
-                wordBreak: "break-word",
-                textAlign: "left", // ← fix: explicit left alignment
+                margin: "0 0 12px",
+                lineHeight: 1.85,
+                color: "#ede3cc",
+                textAlign: "left",
               }}
             >
               {children}
@@ -216,12 +229,7 @@ function MarkdownRenderer({ content }) {
         ul({ children }) {
           return (
             <ul
-              style={{
-                paddingLeft: 20,
-                margin: "0 0 10px",
-                listStyleType: "disc",
-                textAlign: "left",
-              }}
+              style={{ paddingLeft: 22, margin: "0 0 12px", textAlign: "left" }}
             >
               {children}
             </ul>
@@ -230,12 +238,7 @@ function MarkdownRenderer({ content }) {
         ol({ children }) {
           return (
             <ol
-              style={{
-                paddingLeft: 20,
-                margin: "0 0 10px",
-                listStyleType: "decimal",
-                textAlign: "left",
-              }}
+              style={{ paddingLeft: 22, margin: "0 0 12px", textAlign: "left" }}
             >
               {children}
             </ol>
@@ -245,8 +248,9 @@ function MarkdownRenderer({ content }) {
           return (
             <li
               style={{
-                marginBottom: 4,
-                color: "rgba(255,255,255,.82)",
+                marginBottom: 5,
+                color: "#ddd4bc",
+                lineHeight: 1.75,
                 textAlign: "left",
               }}
             >
@@ -261,9 +265,9 @@ function MarkdownRenderer({ content }) {
               target="_blank"
               rel="noreferrer"
               style={{
-                color: "#a78bfa",
+                color: "#d4904a",
                 textDecoration: "underline",
-                wordBreak: "break-all",
+                textUnderlineOffset: 3,
               }}
             >
               {children}
@@ -274,11 +278,12 @@ function MarkdownRenderer({ content }) {
           return (
             <h1
               style={{
-                fontSize: "1.2rem",
-                fontWeight: 700,
-                margin: "0 0 10px",
-                color: "white",
-                textAlign: "left",
+                fontFamily: "'Instrument Serif', Georgia, serif",
+                fontSize: "1.5rem",
+                fontWeight: 400,
+                margin: "0 0 12px",
+                color: "#f0e6ce",
+                fontStyle: "italic",
               }}
             >
               {children}
@@ -289,11 +294,12 @@ function MarkdownRenderer({ content }) {
           return (
             <h2
               style={{
-                fontSize: "1.05rem",
-                fontWeight: 600,
-                margin: "0 0 8px",
-                color: "white",
-                textAlign: "left",
+                fontFamily: "'Instrument Serif', Georgia, serif",
+                fontSize: "1.25rem",
+                fontWeight: 400,
+                margin: "0 0 10px",
+                color: "#e8dcca",
+                fontStyle: "italic",
               }}
             >
               {children}
@@ -304,11 +310,12 @@ function MarkdownRenderer({ content }) {
           return (
             <h3
               style={{
-                fontSize: ".95rem",
+                fontSize: ".9rem",
                 fontWeight: 600,
-                margin: "0 0 6px",
-                color: "rgba(255,255,255,.9)",
-                textAlign: "left",
+                margin: "0 0 8px",
+                color: "#d8ccb4",
+                textTransform: "uppercase",
+                letterSpacing: ".08em",
               }}
             >
               {children}
@@ -319,12 +326,11 @@ function MarkdownRenderer({ content }) {
           return (
             <blockquote
               style={{
-                borderLeft: "3px solid rgba(167,139,250,.4)",
-                paddingLeft: 14,
+                borderLeft: "2px solid rgba(210,140,40,.6)",
+                paddingLeft: 16,
                 fontStyle: "italic",
-                color: "rgba(255,255,255,.55)",
-                margin: "10px 0",
-                textAlign: "left",
+                color: "rgba(237,227,204,.65)",
+                margin: "12px 0",
               }}
             >
               {children}
@@ -333,13 +339,12 @@ function MarkdownRenderer({ content }) {
         },
         table({ children }) {
           return (
-            <div style={{ overflowX: "auto", margin: "10px 0" }}>
+            <div style={{ overflowX: "auto", margin: "12px 0" }}>
               <table
                 style={{
                   borderCollapse: "collapse",
                   width: "100%",
-                  fontSize: 12.5,
-                  textAlign: "left",
+                  fontSize: 13,
                 }}
               >
                 {children}
@@ -351,10 +356,13 @@ function MarkdownRenderer({ content }) {
           return (
             <th
               style={{
-                border: "1px solid rgba(255,255,255,.12)",
-                padding: "6px 10px",
-                background: "rgba(255,255,255,.05)",
-                color: "rgba(255,255,255,.8)",
+                border: "1px solid rgba(210,140,40,.2)",
+                padding: "7px 12px",
+                background: "rgba(210,140,40,.08)",
+                color: "#d8ccb4",
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: ".07em",
                 textAlign: "left",
               }}
             >
@@ -367,8 +375,8 @@ function MarkdownRenderer({ content }) {
             <td
               style={{
                 border: "1px solid rgba(255,255,255,.08)",
-                padding: "6px 10px",
-                color: "rgba(255,255,255,.72)",
+                padding: "7px 12px",
+                color: "#ccc4b0",
                 textAlign: "left",
               }}
             >
@@ -383,7 +391,6 @@ function MarkdownRenderer({ content }) {
   );
 }
 
-// ── Message ────────────────────────────────────────────────────────────────
 function Message({ msg }) {
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
@@ -392,151 +399,94 @@ function Message({ msg }) {
       await navigator.clipboard.writeText(msg.content);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
   };
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isUser ? "row-reverse" : "row",
-        alignItems: "flex-start",
-        gap: 10,
-        width: "100%",
-      }}
-    >
-      <Avatar role={msg.role} />
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: isUser ? "flex-end" : "flex-start",
-          maxWidth: "72%",
-          minWidth: 0,
-        }}
-      >
-        {/* Bubble */}
-        <div
-          style={{
-            position: "relative",
-            padding: "10px 14px",
-            borderRadius: isUser ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
-            fontSize: 14,
-            lineHeight: 1.65,
-            wordBreak: "break-word",
-            overflowWrap: "anywhere",
-            textAlign: "left", // ← fix: always left-align bubble content
-            ...(isUser
-              ? {
-                  background: "linear-gradient(135deg,#10b981,#059669)",
-                  color: "#f0fdf4",
-                  boxShadow: "0 4px 20px rgba(16,185,129,.2)",
-                }
-              : {
-                  background: "rgba(255,255,255,.05)",
-                  border: "1px solid rgba(255,255,255,.1)",
-                  color: "rgba(255,255,255,.9)",
-                }),
-          }}
-          className="msg-bubble-group"
-        >
-          {isUser ? (
-            <p style={{ margin: 0, whiteSpace: "pre-wrap", textAlign: "left" }}>
-              {msg.content}
-            </p>
-          ) : (
-            <MarkdownRenderer content={msg.content} />
-          )}
-          <button onClick={copy} className="copy-btn" title="Copy">
-            {copied ? <CheckIcon /> : <CopyIcon />}
+  if (isUser)
+    return (
+      <div className="msg-user-row">
+        <div className="msg-user-bubble">
+          <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+            {msg.content}
+          </p>
+          <button onClick={copy} className="copy-btn-user" title="Copy">
+            {copied ? <IconCheck /> : <IconCopy />}
           </button>
         </div>
-
-        {msg.tokens_used && (
-          <span
-            style={{
-              fontSize: 10,
-              color: "rgba(255,255,255,.2)",
-              marginTop: 3,
-              paddingInline: 2,
-            }}
-          >
-            {msg.tokens_used} tokens
-          </span>
-        )}
+      </div>
+    );
+  return (
+    <div className="msg-ai-row">
+      <div className="msg-ai-marker">
+        <span className="ai-diamond">◆</span>
+        <div className="ai-thread-line" />
+      </div>
+      <div className="msg-ai-body">
+        <MarkdownRenderer content={msg.content} />
+        <div className="msg-ai-footer">
+          {msg.tokens_used && (
+            <span className="token-count">{msg.tokens_used} tokens</span>
+          )}
+          <button onClick={copy} className="copy-btn-ai" title="Copy">
+            {copied ? (
+              <>
+                <IconCheck /> <span>Copied</span>
+              </>
+            ) : (
+              <>
+                <IconCopy /> <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Typing indicator ───────────────────────────────────────────────────────
 function TypingIndicator() {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "flex-start",
-        gap: 10,
-      }}
-    >
-      <Avatar role="assistant" />
-      <div
-        style={{
-          padding: "12px 16px",
-          borderRadius: "4px 18px 18px 18px",
-          background: "rgba(255,255,255,.05)",
-          border: "1px solid rgba(255,255,255,.1)",
-          display: "flex",
-          alignItems: "center",
-          gap: 5,
-        }}
-      >
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="typing-dot"
-            style={{ animationDelay: `${i * 0.18}s` }}
-          />
-        ))}
+    <div className="msg-ai-row">
+      <div className="msg-ai-marker">
+        <span className="ai-diamond pulse-diamond">◆</span>
+        <div className="ai-thread-line" />
+      </div>
+      <div className="msg-ai-body" style={{ paddingTop: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="typing-dot"
+              style={{ animationDelay: `${i * 0.2}s` }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Suggested prompts ──────────────────────────────────────────────────────
 function SuggestedPrompts({ onSelect }) {
   const prompts = [
-    { label: "Explain React hooks", icon: "⚛" },
-    { label: "Write a Python API", icon: "🐍" },
-    { label: "Generate SQL queries", icon: "🗄" },
-    { label: "Summarize this text", icon: "✦" },
+    { label: "Explain React hooks in depth", tag: "code" },
+    { label: "Write a Python REST API", tag: "code" },
+    { label: "Generate optimized SQL queries", tag: "data" },
+    { label: "Summarize and analyze this text", tag: "writing" },
   ];
   return (
-    <div>
-      <p
-        style={{
-          fontSize: 11,
-          color: "rgba(255,255,255,.28)",
-          textAlign: "center",
-          marginBottom: 12,
-          letterSpacing: ".06em",
-          textTransform: "uppercase",
-          fontWeight: 500,
-        }}
-      >
-        Try asking
-      </p>
-      <div className="prompt-grid">
-        {prompts.map(({ label, icon }) => (
+    <div className="prompts-section">
+      <p className="prompts-eyebrow">— Try asking</p>
+      <div className="prompts-list">
+        {prompts.map(({ label, tag }) => (
           <button
             key={label}
             onClick={() => onSelect(label)}
-            className="prompt-btn"
+            className="prompt-item"
           >
-            <span style={{ fontSize: 16 }}>{icon}</span>
-            <span>{label}</span>
+            <span className="prompt-tag">{tag}</span>
+            <span className="prompt-label">{label}</span>
+            <span className="prompt-arrow">→</span>
           </button>
         ))}
       </div>
@@ -544,7 +494,6 @@ function SuggestedPrompts({ onSelect }) {
   );
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
 export default function Chat() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState(() => {
@@ -552,7 +501,9 @@ export default function Chat() {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch {}
+      } catch (err) {
+        console.error("Failed to parse saved messages: ", err);
+      }
     }
     return [INITIAL_MESSAGE];
   });
@@ -577,7 +528,7 @@ export default function Chat() {
     navigate("/login");
   };
   const resetH = () => {
-    if (textareaRef.current) textareaRef.current.style.height = "22px";
+    if (textareaRef.current) textareaRef.current.style.height = "24px";
   };
 
   const handleSend = async (forced = null) => {
@@ -595,7 +546,6 @@ export default function Chat() {
       .slice(1)
       .map((m) => ({ role: m.role, content: m.content }));
     try {
-      // Pass the abort signal so Stop button can cancel the request
       const res = await chatAPI.send(
         text,
         history,
@@ -629,7 +579,6 @@ export default function Chat() {
     setError("");
     localStorage.removeItem("chat_messages");
   };
-
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -639,107 +588,73 @@ export default function Chat() {
   const onInput = (e) => {
     setInput(e.target.value);
     e.target.style.height = "auto";
-    e.target.style.height = Math.min(e.target.scrollHeight, 150) + "px";
+    e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
   };
 
   return (
-    <div className="chat-root">
-      <div className="bg-glow" />
-      <div className="bg-grid" />
+    <div className="root">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');`}</style>
+      <div className="noise-overlay" />
 
-      {/* Header */}
-      <header className="chat-header">
-        <div className="hdr-brand">
-          <div className="brand-icon-wrap">
-            <SparkleIcon size={13} />
-          </div>
-          <div>
-            <div className="brand-name">AI Chat</div>
-            <div className="brand-sub">gemini-2.5-flash-lite</div>
-          </div>
+      <header className="hdr">
+        <div className="hdr-left">
+          <span className="hdr-wordmark">Dispatch</span>
+          <span className="hdr-sep">·</span>
+          <span className="hdr-model">gemini-2.5-flash-lite</span>
         </div>
-
-        <div className="hdr-status">
-          <span className="status-dot" />
-          <span className="status-txt">Online</span>
+        <div className="hdr-status-pill">
+          <span className="status-ring" />
+          online
         </div>
-
-        <div className="hdr-actions">
-          <Link to="/rag" className="hdr-btn ghost">
-            <span className="btn-icon-only">
-              <svg
-                width={13}
-                height={13}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-            </span>
-            <span className="btn-lbl">RAG Q&A</span>
+        <nav className="hdr-nav">
+          <Link to="/rag" className="nav-btn">
+            <IconEdit />
+            <span>RAG</span>
           </Link>
-          <button onClick={clear} className="hdr-btn ghost" title="Clear">
-            <span className="btn-icon-only">
-              <TrashIcon />
-            </span>
-            <span className="btn-lbl">Clear</span>
+          <button onClick={clear} className="nav-btn" title="Clear history">
+            <IconTrash />
+            <span>Clear</span>
           </button>
           <button
             onClick={handleLogout}
-            className="hdr-btn danger"
+            className="nav-btn nav-btn--danger"
             title="Sign out"
           >
-            <span className="btn-icon-only">
-              <LogoutIcon />
-            </span>
-            <span className="btn-lbl">Sign out</span>
+            <IconLogout />
+            <span>Sign out</span>
           </button>
-        </div>
+        </nav>
       </header>
 
-      {/* Messages */}
-      <div className="msgs-scroll">
-        <div className="msgs-inner">
+      <div className="scroll-area">
+        <div className="scroll-inner">
           {!hasMessages && (
-            <>
-              <div className="welcome">
-                <div className="welcome-icon">
-                  <SparkleIcon size={22} />
-                </div>
-                <h2 className="welcome-h">How can I help today?</h2>
-                <p className="welcome-p">
-                  Ask me anything — code, writing, analysis, and more.
-                </p>
-              </div>
+            <div className="welcome">
+              <p className="welcome-eyebrow">AI · Ready</p>
+              <h1 className="welcome-heading">
+                How can I<br />
+                <em>help today?</em>
+              </h1>
+              <p className="welcome-sub">
+                Code, writing, analysis - ask anything.
+              </p>
               <SuggestedPrompts onSelect={handleSend} />
-            </>
+            </div>
           )}
-
-          {messages.map((msg) => (
-            <Message key={msg.id} msg={msg} />
-          ))}
-          {loading && <TypingIndicator />}
-          {error && <div className="err-banner">{error}</div>}
+          <div className="thread">
+            {messages.map((msg) => (
+              <Message key={msg.id} msg={msg} />
+            ))}
+            {loading && <TypingIndicator />}
+            {error && <div className="err-bar">{error}</div>}
+          </div>
           <div ref={bottomRef} />
         </div>
       </div>
 
-      {/* Input */}
-      <div className="input-bar">
-        <div className="input-wrap">
-          <div
-            className="input-box"
-            onFocusCapture={(e) =>
-              (e.currentTarget.style.borderColor = "rgba(124,58,237,.5)")
-            }
-            onBlurCapture={(e) =>
-              (e.currentTarget.style.borderColor = "rgba(255,255,255,.09)")
-            }
-          >
+      <div className="input-zone">
+        <div className="input-inner">
+          <div className="input-field-wrap">
             <textarea
               ref={textareaRef}
               rows={1}
@@ -748,242 +663,187 @@ export default function Chat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
               disabled={loading}
-              placeholder="Message AI…"
-              className="msg-input"
+              placeholder="Message Dispatch…"
+              className="input-field"
             />
-            {loading ? (
-              <button onClick={stop} className="send-btn stop-btn">
-                <StopIcon />
-              </button>
-            ) : (
-              <button
-                onClick={() => handleSend()}
-                disabled={!input.trim()}
-                className={`send-btn ${input.trim() ? "send-active" : "send-idle"}`}
-              >
-                <SendIcon />
-              </button>
-            )}
+            <div className="input-actions">
+              {loading ? (
+                <button
+                  onClick={stop}
+                  className="send-btn send-btn--stop"
+                  title="Stop"
+                >
+                  <IconStop />
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSend()}
+                  disabled={!input.trim()}
+                  className={`send-btn ${input.trim() ? "send-btn--active" : "send-btn--idle"}`}
+                  title="Send"
+                >
+                  <IconSend />
+                </button>
+              )}
+            </div>
           </div>
           <p className="disclaimer">
-            AI can make mistakes. Verify important information.
+            Dispatch may produce inaccurate results. Verify important
+            information.
           </p>
         </div>
       </div>
 
       <style>{`
-        /* ── Global resets (scoped via chat-root or global) ── */
-        html, body {
-          margin: 0;
-          padding: 0;
-          height: 100%;
-          width: 100%;
-        }
-        #root {
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-        }
-
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body, #root { height: 100%; }
+        #root { display: flex; flex-direction: column; }
 
-        .chat-root {
-          width: 100%; height: 100vh; height: 100dvh;
-          overflow: hidden; background: #08090d; color: white;
-          display: flex; flex-direction: column;
-          font-family: 'Sora','DM Sans',ui-sans-serif;
-          position: relative; font-size: 14px;
+        .root {
+          height: 100vh; height: 100dvh;
+          display: flex; flex-direction: column; overflow: hidden;
+          background: #13110d;
+          color: #ede3cc;
+          font-family: 'Outfit', ui-sans-serif, sans-serif; font-size: 14px;
+          position: relative;
         }
-        .bg-glow {
-          position: absolute; inset: 0; pointer-events: none;
-          background: radial-gradient(ellipse 70% 45% at 15% 0%,rgba(124,58,237,.1) 0%,transparent 60%),
-                      radial-gradient(ellipse 55% 40% at 90% 100%,rgba(16,185,129,.08) 0%,transparent 55%);
-        }
-        .bg-grid {
-          position: absolute; inset: 0; pointer-events: none;
-          background-image: linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
-                            linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
-          background-size: 48px 48px; opacity: .4;
+        .noise-overlay {
+          position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .03;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          background-repeat: repeat; background-size: 200px 200px;
         }
 
         /* Header */
-        .chat-header {
-          position: relative; z-index: 10; flex-shrink: 0;
-          border-bottom: 1px solid rgba(255,255,255,.07);
-          background: rgba(8,9,13,.9); backdrop-filter: blur(20px);
-          padding: 0 20px; height: 52px;
-          display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        .hdr {
+          position: relative; z-index: 20; flex-shrink: 0; height: 50px;
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0 24px;
+          border-bottom: 1px solid rgba(210,140,40,.18);
+          background: rgba(13,11,8,.94); backdrop-filter: blur(24px);
         }
-        .hdr-brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
-        .brand-icon-wrap {
-          width: 28px; height: 28px; border-radius: 9px; flex-shrink: 0;
-          background: linear-gradient(135deg,rgba(124,58,237,.3),rgba(99,102,241,.2));
-          border: 1px solid rgba(124,58,237,.3);
-          display: flex; align-items: center; justify-content: center; color: #a78bfa;
-        }
-        .brand-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.92); line-height: 1.2; }
-        .brand-sub { font-size: 10.5px; color: rgba(255,255,255,.3); line-height: 1.2; }
-        .hdr-status {
+        .hdr-left { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+        .hdr-wordmark { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 17px; color: #f0e6ce; letter-spacing: .01em; }
+        .hdr-sep { color: rgba(210,140,40,.55); font-size: 15px; }
+        .hdr-model { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(210,140,40,.65); letter-spacing: .03em; }
+        .hdr-status-pill {
           position: absolute; left: 50%; transform: translateX(-50%);
-          display: flex; align-items: center; gap: 5px;
-          padding: 4px 11px; border-radius: 20px;
-          background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
-          pointer-events: none;
+          display: flex; align-items: center; gap: 6px;
+          font-size: 11px; color: rgba(237,227,204,.5);
+          font-family: 'JetBrains Mono', monospace; letter-spacing: .05em;
         }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,.6); }
-        .status-txt { font-size: 11px; color: rgba(255,255,255,.45); font-weight: 500; }
-        .hdr-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-        .hdr-btn {
+        .status-ring {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: rgba(210,140,40,.85);
+          box-shadow: 0 0 0 2px rgba(210,140,40,.2);
+          animation: pulse-ring 2.5s ease-in-out infinite;
+        }
+        @keyframes pulse-ring {
+          0%,100% { box-shadow: 0 0 0 2px rgba(210,140,40,.2); }
+          50% { box-shadow: 0 0 0 4px rgba(210,140,40,.1); }
+        }
+        .hdr-nav { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-btn {
           display: inline-flex; align-items: center; gap: 5px;
-          font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 8px;
-          border: 1px solid rgba(255,255,255,.08); background: transparent;
-          cursor: pointer; text-decoration: none; transition: all .15s; white-space: nowrap;
-          font-family: inherit;
+          font-size: 12px; font-weight: 400; color: rgba(237,227,204,.55);
+          padding: 5px 10px; border-radius: 5px;
+          border: 1px solid transparent; background: transparent;
+          cursor: pointer; text-decoration: none; transition: all .15s;
+          font-family: 'Outfit', sans-serif; letter-spacing: .01em;
         }
-        .hdr-btn.ghost { color: rgba(255,255,255,.45); }
-        .hdr-btn.ghost:hover { color: rgba(255,255,255,.9); background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.15); }
-        .hdr-btn.danger { color: rgba(252,165,165,.8); border-color: rgba(239,68,68,.2); }
-        .hdr-btn.danger:hover { color: #fca5a5; background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.3); }
-        .btn-icon-only { display: none; }
-        .btn-lbl { display: inline; }
+        .nav-btn:hover { color: rgba(237,227,204,.9); background: rgba(210,140,40,.09); border-color: rgba(210,140,40,.22); }
+        .nav-btn--danger { color: rgba(220,120,90,.65); }
+        .nav-btn--danger:hover { color: rgba(230,140,110,.95); background: rgba(200,80,60,.09); border-color: rgba(200,80,60,.22); }
 
-        /* Messages */
-        .msgs-scroll {
-          position: relative; z-index: 10; flex: 1; overflow-y: auto;
-          padding: 24px 20px 12px;
-          -webkit-overflow-scrolling: touch;
-        }
-        .msgs-inner {
-          width: 100%; max-width: 860px; margin: 0 auto;
-          display: flex; flex-direction: column; gap: 18px;
-        }
+        /* Scroll */
+        .scroll-area { position: relative; z-index: 10; flex: 1; overflow-y: auto; padding: 0 24px; -webkit-overflow-scrolling: touch; }
+        .scroll-area::-webkit-scrollbar { width: 3px; }
+        .scroll-area::-webkit-scrollbar-track { background: transparent; }
+        .scroll-area::-webkit-scrollbar-thumb { background: rgba(210,140,40,.2); border-radius: 3px; }
+        .scroll-inner { max-width: 820px; margin: 0 auto; padding: 40px 0 20px; }
 
         /* Welcome */
-        .welcome { text-align: center; padding: 36px 0 24px; }
-        .welcome-icon {
-          width: 46px; height: 46px; border-radius: 14px; margin: 0 auto 14px;
-          background: linear-gradient(135deg,rgba(124,58,237,.25),rgba(99,102,241,.15));
-          border: 1px solid rgba(124,58,237,.25);
-          display: flex; align-items: center; justify-content: center; color: #a78bfa;
-        }
-        .welcome-h { font-size: 18px; font-weight: 600; color: rgba(255,255,255,.9); margin-bottom: 6px; }
-        .welcome-p { font-size: 13px; color: rgba(255,255,255,.35); }
+        .welcome { padding: 20px 0 48px; }
+        .welcome-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .15em; color: rgba(210,140,40,.65); text-transform: uppercase; margin-bottom: 16px; }
+        .welcome-heading { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(36px, 5vw, 52px); font-weight: 400; line-height: 1.15; color: #f0e6ce; margin-bottom: 14px; }
+        .welcome-heading em { font-style: italic; color: rgba(210,140,40,.9); }
+        .welcome-sub { font-size: 14px; color: rgba(237,227,204,.45); margin-bottom: 36px; font-weight: 300; }
 
-        /* Prompt grid */
-        .prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .prompt-btn {
-          text-align: left; padding: 12px 14px; border-radius: 14px;
-          background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
-          color: rgba(255,255,255,.72); font-size: 13px; cursor: pointer;
-          transition: all .15s; display: flex; align-items: center; gap: 9px;
-          font-family: inherit;
+        /* Prompts */
+        .prompts-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .12em; color: rgba(210,140,40,.55); margin-bottom: 14px; }
+        .prompts-list { display: flex; flex-direction: column; gap: 2px; }
+        .prompt-item {
+          display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 6px;
+          border: 1px solid transparent; background: transparent;
+          cursor: pointer; text-align: left; transition: all .15s; font-family: 'Outfit', sans-serif;
         }
-        .prompt-btn:hover { background: rgba(255,255,255,.06); border-color: rgba(167,139,250,.2); color: rgba(255,255,255,.92); }
-        .prompt-btn:active { transform: scale(.98); }
+        .prompt-item:hover { background: rgba(210,140,40,.07); border-color: rgba(210,140,40,.18); }
+        .prompt-item:hover .prompt-arrow { opacity: .8; transform: translateX(3px); }
+        .prompt-tag { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: rgba(210,140,40,.65); min-width: 38px; }
+        .prompt-label { font-size: 13.5px; color: rgba(237,227,204,.75); flex: 1; font-weight: 300; }
+        .prompt-arrow { font-size: 14px; color: rgba(210,140,40,.55); transition: all .15s; opacity: 0; }
 
-        /* Bubble copy btn */
-        .copy-btn {
-          position: absolute; top: 8px; right: 8px;
-          opacity: 0; transition: opacity .15s;
-          color: rgba(255,255,255,.3); background: transparent;
-          border: none; cursor: pointer; padding: 3px; border-radius: 5px; line-height: 1;
+        /* Thread */
+        .thread { display: flex; flex-direction: column; gap: 0; }
+
+        /* AI messages */
+        .msg-ai-row {
+          display: flex; gap: 0; padding: 20px 0;
+          border-top: 1px solid rgba(210,140,40,.09);
+          animation: fadeSlideIn .3s ease;
         }
-        .msg-bubble-group:hover .copy-btn { opacity: 1; }
-        @media (hover: none) { .copy-btn { opacity: .4; } }
+        .msg-ai-row:first-child { border-top: none; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .msg-ai-marker { width: 32px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0; padding-top: 2px; }
+        .ai-diamond { font-size: 8px; color: rgba(210,140,40,.75); line-height: 1; flex-shrink: 0; display: block; }
+        .pulse-diamond { animation: diamondPulse 1.5s ease-in-out infinite; }
+        @keyframes diamondPulse { 0%,100% { opacity: .7; } 50% { opacity: 1; color: rgba(210,140,40,1); } }
+        .ai-thread-line { width: 1px; flex: 1; margin-top: 6px; background: linear-gradient(to bottom, rgba(210,140,40,.25), transparent); min-height: 20px; }
+        .msg-ai-body { flex: 1; min-width: 0; font-family: 'Instrument Serif', Georgia, serif; font-size: 15.5px; line-height: 1.85; color: #ede3cc; padding-left: 8px; }
+        .msg-ai-body p:last-child { margin-bottom: 0; }
+        .msg-ai-footer { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(210,140,40,.09); }
+        .token-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(210,140,40,.45); letter-spacing: .04em; }
+        .copy-btn-ai { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(237,227,204,.38); background: transparent; border: none; cursor: pointer; font-family: 'Outfit', sans-serif; transition: color .15s; letter-spacing: .03em; }
+        .copy-btn-ai:hover { color: rgba(210,140,40,.75); }
+
+        /* User messages */
+        .msg-user-row { display: flex; justify-content: flex-end; padding: 16px 0; animation: fadeSlideIn .25s ease; }
+        .msg-user-bubble {
+          position: relative; max-width: 62%; padding: 11px 15px;
+          border-radius: 3px 14px 14px 14px;
+          background: rgba(210,140,40,.12);
+          border: 1px solid rgba(210,140,40,.25);
+          font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.65;
+          color: rgba(237,227,204,.9); word-break: break-word;
+        }
+        .copy-btn-user { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity .15s; color: rgba(210,140,40,.55); background: transparent; border: none; cursor: pointer; padding: 2px; border-radius: 3px; }
+        .msg-user-bubble:hover .copy-btn-user { opacity: 1; }
+        @media (hover: none) { .copy-btn-user { opacity: .5; } }
 
         /* Typing */
-        .typing-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: rgba(167,139,250,.7); display: inline-block;
-          animation: tdot 1.2s ease-in-out infinite;
-        }
-        @keyframes tdot {
-          0%,80%,100% { transform: translateY(0); opacity: .5; }
-          40% { transform: translateY(-5px); opacity: 1; }
-        }
+        .typing-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(210,140,40,.65); display: inline-block; animation: tdot 1.3s ease-in-out infinite; }
+        @keyframes tdot { 0%,80%,100% { transform: translateY(0); opacity: .5; } 40% { transform: translateY(-5px); opacity: 1; } }
 
         /* Error */
-        .err-banner {
-          background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
-          border-radius: 12px; padding: 11px 15px; font-size: 13px; color: #fca5a5;
-        }
+        .err-bar { margin: 10px 0; padding: 10px 16px; border-radius: 4px; background: rgba(200,80,60,.08); border: 1px solid rgba(200,80,60,.25); font-size: 13px; color: rgba(230,150,130,.9); font-family: 'JetBrains Mono', monospace; }
 
-        /* Input */
-        .input-bar {
-          position: relative; z-index: 10; flex-shrink: 0;
-          border-top: 1px solid rgba(255,255,255,.07);
-          background: rgba(8,9,13,.94); backdrop-filter: blur(20px);
-          padding: 12px 20px;
-          padding-bottom: max(12px, env(safe-area-inset-bottom));
-        }
-        .input-wrap { width: 100%; max-width: 860px; margin: 0 auto; }
-        .input-box {
-          display: flex; align-items: flex-end; gap: 10px;
-          background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
-          border-radius: 16px; padding: 10px 12px; transition: border-color .2s;
-        }
-        .msg-input {
-          flex: 1; background: transparent; resize: none;
-          font-size: 14px; color: rgba(255,255,255,.88); caret-color: #a78bfa;
-          outline: none; border: none; line-height: 1.6;
-          max-height: 150px; height: 22px; font-family: inherit;
-          -webkit-appearance: none;
-          text-align: left;
-        }
-        .msg-input::placeholder { color: rgba(255,255,255,.22); }
-        .send-btn {
-          width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
-          display: flex; align-items: center; justify-content: center;
-          border: none; cursor: pointer; transition: all .18s;
-        }
-        .send-active {
-          background: linear-gradient(135deg,#7c3aed,#4f46e5);
-          border: 1px solid rgba(124,58,237,.5) !important;
-          color: white; box-shadow: 0 4px 16px rgba(124,58,237,.3);
-        }
-        .send-idle {
-          background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.06) !important;
-          color: rgba(255,255,255,.2); cursor: default;
-        }
-        .stop-btn {
-          background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3) !important;
-          color: #f87171;
-        }
-        .disclaimer { font-size: 10.5px; color: rgba(255,255,255,.18); text-align: center; margin-top: 7px; }
+        /* Input zone */
+        .input-zone { position: relative; z-index: 20; flex-shrink: 0; background: rgba(13,11,8,.95); backdrop-filter: blur(24px); border-top: 1px solid rgba(210,140,40,.15); padding: 16px 24px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+        .input-inner { max-width: 820px; margin: 0 auto; }
+        .input-field-wrap { display: flex; align-items: flex-end; gap: 12px; padding: 10px 0 10px; border-bottom: 1.5px solid rgba(210,140,40,.32); transition: border-color .2s; }
+        .input-field-wrap:focus-within { border-bottom-color: rgba(210,140,40,.65); }
+        .input-field { flex: 1; background: transparent; resize: none; font-size: 15px; font-family: 'Outfit', sans-serif; font-weight: 300; color: rgba(237,227,204,.92); caret-color: rgba(210,140,40,.85); outline: none; border: none; line-height: 1.6; max-height: 160px; height: 24px; -webkit-appearance: none; }
+        .input-field::placeholder { color: rgba(210,140,40,.35); font-style: italic; }
+        .input-actions { flex-shrink: 0; display: flex; align-items: center; }
+        .send-btn { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all .18s; flex-shrink: 0; }
+        .send-btn--active { background: rgba(210,140,40,.2); border: 1px solid rgba(210,140,40,.45); color: rgba(210,140,40,.95); }
+        .send-btn--active:hover { background: rgba(210,140,40,.28); border-color: rgba(210,140,40,.6); }
+        .send-btn--idle { background: transparent; border: 1px solid transparent; color: rgba(210,140,40,.28); cursor: default; }
+        .send-btn--stop { background: rgba(200,80,60,.12); border: 1px solid rgba(200,80,60,.3); color: rgba(230,140,120,.8); }
+        .disclaimer { font-size: 10.5px; color: rgba(210,140,40,.3); font-family: 'JetBrains Mono', monospace; letter-spacing: .03em; text-align: center; margin-top: 10px; }
 
-        /* Scrollbar */
-        .msgs-scroll::-webkit-scrollbar { width: 4px; }
-        .msgs-scroll::-webkit-scrollbar-track { background: transparent; }
-        .msgs-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
-
-        /* ── Responsive ── */
-        @media (max-width: 768px) {
-          .hdr-status { display: none; }
-          .chat-header { padding: 0 14px; }
-          .brand-sub { display: none; }
-          .msgs-scroll { padding: 18px 14px 10px; }
-          .input-bar { padding: 10px 14px; padding-bottom: max(10px,env(safe-area-inset-bottom)); }
-        }
-        @media (max-width: 480px) {
-          .chat-header { padding: 0 10px; height: 48px; }
-          .hdr-btn { padding: 7px; border-radius: 9px; }
-          .btn-lbl { display: none; }
-          .btn-icon-only { display: flex; align-items: center; }
-          .brand-icon-wrap { width: 26px; height: 26px; }
-          .brand-name { font-size: 12.5px; }
-          .msgs-scroll { padding: 14px 10px 8px; }
-          .msgs-inner { gap: 14px; }
-          .prompt-grid { grid-template-columns: 1fr; gap: 6px; }
-          .input-bar { padding: 8px 10px; padding-bottom: max(10px,env(safe-area-inset-bottom)); }
-          .input-box { padding: 8px 10px; border-radius: 14px; }
-          .welcome { padding: 20px 0 16px; }
-          .welcome-h { font-size: 16px; }
-        }
-        @media (min-width: 1200px) {
-          .chat-header { padding: 0 28px; }
-          .msgs-scroll { padding: 28px 28px 12px; }
-          .input-bar { padding: 14px 28px 16px; }
-        }
+        @media (max-width: 768px) { .hdr { padding: 0 16px; } .hdr-status-pill { display: none; } .scroll-area { padding: 0 16px; } .input-zone { padding: 12px 16px; padding-bottom: max(12px,env(safe-area-inset-bottom)); } .msg-user-bubble { max-width: 80%; font-size: 12.5px; } .welcome-heading { font-size: 32px; } }
+        @media (max-width: 480px) { .hdr { height: 46px; padding: 0 12px; } .hdr-model { display: none; } .hdr-sep { display: none; } .nav-btn span:not([style]) { display: none; } .scroll-area { padding: 0 12px; } .scroll-inner { padding: 24px 0 16px; } .input-zone { padding: 10px 12px; padding-bottom: max(12px,env(safe-area-inset-bottom)); } .msg-user-bubble { max-width: 88%; } .welcome { padding: 10px 0 32px; } .prompt-tag { display: none; } }
+        @media (min-width: 1280px) { .hdr { padding: 0 36px; } .scroll-area { padding: 0 36px; } .input-zone { padding: 18px 36px 20px; } }
       `}</style>
     </div>
   );
