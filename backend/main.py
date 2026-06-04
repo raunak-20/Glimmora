@@ -13,7 +13,11 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 from database import Base, engine
-from routers import auth, chat, rag
+from routers import auth, chat, rag, logs
+from core.logging import configure_logging
+
+# Configure logging on app startup
+configure_logging()
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +65,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router,  prefix="/api/v1/auth",  tags=["Auth"])
     app.include_router(chat.router,  prefix="/api/v1/chat",  tags=["Chat"])
     app.include_router(rag.router,   prefix="/api/v1/rag",   tags=["RAG"])
+    app.include_router(logs.router,  prefix="/api/v1/logs",  tags=["Logs"])
 
     # ── Health-check ──────────────────────────────────────────────────────
     @app.get("/health", tags=["Health"])

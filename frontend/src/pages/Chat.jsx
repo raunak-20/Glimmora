@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { chatAPI, authAPI } from "../services/api";
-import ThemeToggle from "../components/ThemeToggle";
+import Navbar from "../components/Navbar";
 import { useTheme } from "../components/themeContext";
 
 // ── Syntax theme — warm amber ──────────────────────────────────
@@ -64,6 +64,41 @@ const INITIAL_MESSAGE = {
 };
 const SYSTEM_PROMPT = "You are a helpful, concise AI assistant.";
 
+function IconPlus() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  );
+}
+function IconGlobe() {
+  return (
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="2" y1="12" x2="22" y2="12"></line>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+    </svg>
+  );
+}
+function IconMic() {
+  return (
+    <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+      <line x1="12" y1="19" x2="12" y2="23"></line>
+      <line x1="8" y1="23" x2="16" y2="23"></line>
+    </svg>
+  );
+}
+function IconArrowUp() {
+  return (
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5"></line>
+      <polyline points="5 12 12 5 19 12"></polyline>
+    </svg>
+  );
+}
 function IconSend() {
   return (
     <svg
@@ -549,7 +584,7 @@ export default function Chat() {
   // App-level state for session management
   const [sessions, setSessions] = useState([]);
   const [activeSessionUid, setActiveSessionUid] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
@@ -628,7 +663,7 @@ export default function Chat() {
     navigate("/login");
   };
   const resetH = () => {
-    if (textareaRef.current) textareaRef.current.style.height = "24px";
+    if (textareaRef.current) textareaRef.current.style.height = "22px";
   };
 
   const handleSend = async (forced = null) => {
@@ -700,45 +735,14 @@ export default function Chat() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');`}</style>
       <div className="noise-overlay" />
 
-      <header className="hdr">
-        <div className="hdr-left">
-          <div className="chatgpt-controls-pill">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="control-btn" title="Toggle sidebar">
-              <IconSidebarToggle />
-            </button>
-            <button onClick={handleNewChat} className="control-btn" title="New Chat">
-              <IconNewChat />
-            </button>
-          </div>
-          <div className="model-selector-pill">
-            <span className="hdr-wordmark">Dispatch</span>
-            <span className="arrow-down">›</span>
-          </div>
-        </div>
-        <div className="hdr-status-pill">
-          <span className="status-ring" />
-          online
-        </div>
-        <nav className="hdr-nav">
-          <Link to="/rag" className="nav-btn">
-            <IconEdit />
-            <span>RAG</span>
-          </Link>
-          <button onClick={clearCurrent} className="nav-btn" title="Clear current screen">
-            <IconTrash />
-            <span>Clear</span>
-          </button>
-          <ThemeToggle />
-          <button
-            onClick={handleLogout}
-            className="nav-btn nav-btn--danger"
-            title="Sign out"
-          >
-            <IconLogout />
-            <span>Sign out</span>
-          </button>
-        </nav>
-      </header>
+      <Navbar
+        currentPage="chat"
+        statusText="online"
+        showChatControls={true}
+        onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
+        onNewChat={handleNewChat}
+        onClearScreen={clearCurrent}
+      />
 
       <div className="app-container">
         <aside className={`sidebar ${sidebarOpen ? "" : "sidebar--collapsed"}`}>
@@ -812,7 +816,10 @@ export default function Chat() {
                   placeholder="Message Dispatch…"
                   className="input-field"
                 />
-                <div className="input-actions">
+                <div className="input-actions-row">
+                  <button type="button" className="toolbar-btn" title="Voice input">
+                    <IconMic />
+                  </button>
                   {loading ? (
                     <button
                       onClick={stop}
@@ -828,7 +835,7 @@ export default function Chat() {
                       className={`send-btn ${input.trim() ? "send-btn--active" : "send-btn--idle"}`}
                       title="Send"
                     >
-                      <IconSend />
+                      <IconArrowUp />
                     </button>
                   )}
                 </div>
@@ -861,93 +868,6 @@ export default function Chat() {
           background-repeat: repeat; background-size: 200px 200px;
         }
 
-        /* Header */
-        .hdr {
-          position: relative; z-index: 20; flex-shrink: 0; height: 50px;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 24px;
-          border-bottom: 1px solid rgba(210,140,40,.18);
-          background: rgba(13,11,8,.94); backdrop-filter: blur(24px);
-        }
-        .hdr-left { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
-        
-        .chatgpt-controls-pill {
-          display: inline-flex;
-          align-items: center;
-          background: rgba(210,140,40,.1);
-          border: 1px solid rgba(210,140,40,.22);
-          border-radius: 20px;
-          padding: 2px 4px;
-          gap: 2px;
-        }
-        .control-btn {
-          background: transparent;
-          border: none;
-          color: rgba(237,227,204,.65);
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-        .control-btn:hover {
-          background: rgba(210,140,40,.15);
-          color: rgba(237,227,204,.95);
-        }
-        
-        .model-selector-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 10px;
-          background: rgba(210,140,40,.06);
-          border: 1px solid rgba(210,140,40,.15);
-          border-radius: 15px;
-          font-family: 'Outfit', sans-serif;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .model-selector-pill:hover {
-          background: rgba(210,140,40,.12);
-          border-color: rgba(210,140,40,.3);
-        }
-        .model-selector-pill .arrow-down {
-          color: rgba(210,140,40,.75);
-          font-size: 14px;
-        }
-
-        .hdr-wordmark { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 16px; color: #f0e6ce; letter-spacing: .01em; }
-        .hdr-status-pill {
-          position: absolute; left: 50%; transform: translateX(-50%);
-          display: flex; align-items: center; gap: 6px;
-          font-size: 11px; color: rgba(237,227,204,.5);
-          font-family: 'JetBrains Mono', monospace; letter-spacing: .05em;
-        }
-        .status-ring {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: rgba(210,140,40,.85);
-          box-shadow: 0 0 0 2px rgba(210,140,40,.2);
-          animation: pulse-ring 2.5s ease-in-out infinite;
-        }
-        @keyframes pulse-ring {
-          0%,100% { box-shadow: 0 0 0 2px rgba(210,140,40,.2); }
-          50% { box-shadow: 0 0 0 4px rgba(210,140,40,.1); }
-        }
-        .hdr-nav { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-        .nav-btn {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 12px; font-weight: 400; color: rgba(237,227,204,.55);
-          padding: 5px 10px; border-radius: 5px;
-          border: 1px solid transparent; background: transparent;
-          cursor: pointer; text-decoration: none; transition: all .15s;
-          font-family: 'Outfit', sans-serif; letter-spacing: .01em;
-        }
-        .nav-btn:hover { color: rgba(237,227,204,.9); background: rgba(210,140,40,.09); border-color: rgba(210,140,40,.22); }
-        .nav-btn--danger { color: rgba(220,120,90,.65); }
-        .nav-btn--danger:hover { color: rgba(230,140,110,.95); background: rgba(200,80,60,.09); border-color: rgba(200,80,60,.22); }
 
         /* App container & Sidebar */
         .app-container {
@@ -1131,19 +1051,108 @@ export default function Chat() {
         .err-bar { margin: 10px 0; padding: 10px 16px; border-radius: 4px; background: rgba(200,80,60,.08); border: 1px solid rgba(200,80,60,.25); font-size: 13px; color: rgba(230,140,110,.9); font-family: 'JetBrains Mono', monospace; }
 
         /* Input zone */
-        .input-zone { position: relative; z-index: 20; flex-shrink: 0; background: rgba(13,11,8,.95); backdrop-filter: blur(24px); border-top: 1px solid rgba(210,140,40,.15); padding: 16px 24px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+        .input-zone { position: relative; z-index: 20; flex-shrink: 0; background: transparent; padding: 10px 24px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
         .input-inner { max-width: 820px; margin: 0 auto; }
-        .input-field-wrap { display: flex; align-items: flex-end; gap: 12px; padding: 10px 0 10px; border-bottom: 1.5px solid rgba(210,140,40,.32); transition: border-color .2s; }
-        .input-field-wrap:focus-within { border-bottom-color: rgba(210,140,40,.65); }
-        .input-field { flex: 1; background: transparent; resize: none; font-size: 15px; font-family: 'Outfit', sans-serif; font-weight: 300; color: rgba(237,227,204,.92); caret-color: rgba(210,140,40,.85); outline: none; border: none; line-height: 1.6; max-height: 160px; height: 24px; -webkit-appearance: none; }
-        .input-field::placeholder { color: rgba(210,140,40,.35); font-style: italic; }
-        .input-actions { flex-shrink: 0; display: flex; align-items: center; }
-        .send-btn { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all .18s; flex-shrink: 0; }
-        .send-btn--active { background: rgba(210,140,40,.2); border: 1px solid rgba(210,140,40,.45); color: rgba(210,140,40,.95); }
-        .send-btn--active:hover { background: rgba(210,140,40,.28); border-color: rgba(210,140,40,.6); }
-        .send-btn--idle { background: transparent; border: 1px solid transparent; color: rgba(210,140,40,.28); cursor: default; }
-        .send-btn--stop { background: rgba(200,80,60,.12); border: 1px solid rgba(200,80,60,.3); color: rgba(230,140,120,.8); }
-        .disclaimer { font-size: 10.5px; color: rgba(210,140,40,.3); font-family: 'JetBrains Mono', monospace; letter-spacing: .03em; text-align: center; margin-top: 10px; }
+        .input-field-wrap {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 10px 10px 16px;
+          background: #1b1915;
+          border: 1px solid rgba(210,140,40,.18);
+          border-radius: 24px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .input-field-wrap:focus-within {
+          border-color: rgba(210,140,40,.42);
+          box-shadow: 0 10px 30px rgba(210,140,40,.03);
+        }
+        .input-field {
+          flex: 1;
+          background: transparent;
+          resize: none;
+          font-size: 14.5px;
+          font-family: 'Outfit', sans-serif;
+          font-weight: 300;
+          color: rgba(237,227,204,.92);
+          caret-color: rgba(210,140,40,.85);
+          outline: none;
+          border: none;
+          line-height: 1.5;
+          max-height: 160px;
+          height: 22px;
+          padding: 0;
+          -webkit-appearance: none;
+        }
+        .input-field::placeholder { color: rgba(237, 227, 204, 0.45); font-style: italic; }
+        
+        .input-actions-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+          align-self: center;
+        }
+        .toolbar-btn {
+          background: transparent;
+          border: none;
+          color: rgba(237,227,204,.55);
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .toolbar-btn:hover {
+          background: rgba(210,140,40,.08);
+          color: rgba(237,227,204,.95);
+        }
+        .toolbar-btn--text {
+          border-radius: 14px;
+          padding: 0 10px;
+          width: auto;
+          height: 26px;
+          gap: 4px;
+          font-size: 11.5px;
+          font-family: 'Outfit', sans-serif;
+          font-weight: 400;
+        }
+        
+        .send-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          cursor: pointer;
+          transition: all .15s;
+          flex-shrink: 0;
+        }
+        .send-btn--active {
+          background: #ede3cc;
+          color: #13110d;
+        }
+        .send-btn--active:hover {
+          background: #f0e6ce;
+          transform: scale(1.02);
+        }
+        .send-btn--idle {
+          background: rgba(237,227,204,.08);
+          color: rgba(237,227,204,.22);
+          cursor: default;
+        }
+        .send-btn--stop {
+          background: rgba(200,80,60,.85);
+          color: #ffffff;
+        }
+        .disclaimer { font-size: 10.5px; color: rgba(210,140,40,.28); font-family: 'JetBrains Mono', monospace; letter-spacing: .03em; text-align: center; margin-top: 10px; }
 
         @media (max-width: 768px) { 
           .hdr { padding: 0 16px; } 

@@ -28,14 +28,25 @@ class JSONLogFormatter(logging.Formatter):
 
 
 def configure_logging() -> None:
+    import os
     settings = get_settings()
     root = logging.getLogger()
     root.handlers.clear()
     root.setLevel(settings.log_level.upper())
 
-    handler = logging.StreamHandler()
-    handler.setFormatter(JSONLogFormatter())
-    root.addHandler(handler)
+    # Stream Handler (console)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(JSONLogFormatter())
+    root.addHandler(stream_handler)
+
+    # File Handler (saved logs for frontend)
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    log_dir = os.path.join(backend_dir, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    
+    file_handler = logging.FileHandler(os.path.join(log_dir, "app.log"), encoding="utf-8")
+    file_handler.setFormatter(JSONLogFormatter())
+    root.addHandler(file_handler)
 
 
 def get_logger(name: str) -> logging.Logger:

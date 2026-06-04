@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8000/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
 // Axios instance
 const api = axios.create({
@@ -92,6 +92,18 @@ export const ragAPI = {
   deleteAll: () => api.delete("/rag/documents"),
   getHistory: () => api.get("/rag/history"),
   clearHistory: () => api.delete("/rag/history"),
+};
+
+// Logs
+export const logsAPI = {
+  getLogs: (level = null, search = "", limit = 500) => {
+    const params = new URLSearchParams();
+    if (level) params.append("level", level);
+    if (search) params.append("search", search);
+    params.append("limit", limit.toString());
+    return api.get(`/logs?${params.toString()}`);
+  },
+  clearLogs: () => api.delete("/logs"),
 };
 
 export default api;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI, ragAPI } from "../services/api";
-import ThemeToggle from "../components/ThemeToggle";
+import Navbar from "../components/Navbar";
 
 function Diamond() {
   return <span className="d-diamond">◆</span>;
@@ -243,22 +243,8 @@ export default function RAGQA() {
   const kbChunks = documents.reduce((s, d) => s + (d.chunk_count || 0), 0);
 
   return (
-    <div className="rag-root">
+    <div className="root">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body, #root { height: 100%; }
-
-        .rag-root {
-          min-height: 100vh; min-height: 100dvh;
-          background: #13110d;
-          color: #ede3cc;
-          font-family: 'Outfit', sans-serif;
-          font-size: 14px;
-          position: relative;
-          overflow-x: hidden;
-        }
-
         .rag-root::before {
           content: "";
           position: fixed; inset: 0; pointer-events: none;
@@ -303,28 +289,7 @@ export default function RAGQA() {
           display: flex; gap: 6px; flex-shrink: 0;
           align-items: flex-start; padding-top: 4px;
         }
-        .nav-btn {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 12px; font-weight: 400;
-          color: rgba(237,227,204,.6);
-          padding: 5px 10px; border-radius: 5px;
-          border: 1px solid rgba(210,140,40,.2);
-          background: transparent;
-          cursor: pointer; text-decoration: none;
-          transition: all .15s;
-          font-family: 'Outfit', sans-serif; letter-spacing: .01em;
-        }
-        .nav-btn:hover {
-          color: rgba(237,227,204,.95);
-          background: rgba(210,140,40,.1);
-          border-color: rgba(210,140,40,.35);
-        }
-        .nav-btn--danger { color: rgba(220,120,90,.7); border-color: rgba(220,120,90,.2); }
-        .nav-btn--danger:hover {
-          color: rgba(230,140,110,.95);
-          background: rgba(200,80,60,.1);
-          border-color: rgba(200,80,60,.3);
-        }
+
 
         /* ── Alerts ── */
         .rag-alert {
@@ -633,16 +598,17 @@ export default function RAGQA() {
         @media (max-width: 640px) {
           .rag-layout { padding: 18px 16px 40px; }
           .rag-header { flex-direction: column; align-items: flex-start; }
-          .rag-header-nav { width: 100%; }
-          .nav-btn { flex: 1; justify-content: center; }
           .rag-title { font-size: 36px; }
           .console-header { flex-direction: column; align-items: flex-start; gap: 14px; }
         }
       `}</style>
 
-      <div className="rag-layout">
-        <header className="rag-header">
-          <div className="rag-header-left">
+      <div className="noise-overlay" />
+      <Navbar currentPage="rag" statusText="retrieval index" />
+
+      <div className="app-container" style={{ flexDirection: "column", padding: "20px 24px", overflowY: "auto" }}>
+        <div className="rag-layout" style={{ maxWidth: 1320, width: "100%", margin: "0 auto", padding: "0 0 40px" }}>
+          <div className="rag-header-left" style={{ marginBottom: 28 }}>
             <p className="rag-kicker">Retrieval archive · operational memory</p>
             <h1 className="rag-title">Research & retrieval console</h1>
             <p className="rag-sub">
@@ -650,16 +616,6 @@ export default function RAGQA() {
               your knowledge archive through retrieval-augmented generation.
             </p>
           </div>
-          <nav className="rag-header-nav">
-            <Link to="/chat" className="nav-btn">
-              ← Chat
-            </Link>
-            <ThemeToggle />
-            <button className="nav-btn nav-btn--danger" onClick={handleLogout}>
-              <IconLogout /> Sign out
-            </button>
-          </nav>
-        </header>
 
         {error && <div className="rag-alert rag-alert--err">{error}</div>}
         {success && <div className="rag-alert">{success}</div>}
@@ -897,5 +853,6 @@ export default function RAGQA() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

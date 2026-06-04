@@ -6,6 +6,7 @@ import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import RAGQA from "./pages/RAGQA";
 import Register from "./pages/Register";
+import Logs from "./pages/Logs";
 
 function PublicRedirect() {
   const token = localStorage.getItem("access_token");
@@ -33,6 +34,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <RAGQA />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/logs"
+            element={
+              <ProtectedRoute>
+                <Logs />
               </ProtectedRoute>
             }
           />
