@@ -22,6 +22,7 @@ google-generativeai>=0.8.0
 faiss-cpu>=1.8.0
 pypdf>=4.0.0
 unstructured>=0.13.0         # Markdown loader
+sentence-transformers
 
 # Validation
 pydantic[email]>=2.7.0
