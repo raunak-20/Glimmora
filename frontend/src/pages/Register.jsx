@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
+import ThemeToggle from "../components/ThemeToggle";
 
 const FIELDS = [
   {
@@ -81,6 +82,7 @@ export default function Register() {
   return (
     <div className="root">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap');`}</style>
+      <ThemeToggle className="theme-toggle--auth" />
       <div className="noise" />
       <div className="page">
         <section className="card-wrap">
@@ -240,7 +242,7 @@ const STYLES = `
   .card-div { width: 100%; height: 1px; background: rgba(210,140,40,.15); margin-bottom: 15px; }
   .card-ey { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: rgba(210,140,40,.7); margin-bottom: 5px; }
   .card-sub { font-size: 12.5px; font-weight: 300; color: rgba(237,227,204,.45); line-height: 1.6; }
-  .err-box { display: flex; align-items: flex-start; gap: 9px; background: rgba(200,80,60,.08); border: 1px solid rgba(200,80,60,.25); border-radius: 3px; padding: 10px 13px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: rgba(230,150,130,.9); margin-bottom: 18px; line-height: 1.55; }
+  .err-box { display: flex; align-items: flex-start; gap: 9px; background: rgba(200,80,60,.08); border: 1px solid rgba(200,80,60,.25); border-radius: 3px; padding: 10px 13px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: rgba(230,140,110,.9); margin-bottom: 18px; line-height: 1.55; }
   .form { display: flex; flex-direction: column; gap: 16px; }
   .field { display: flex; flex-direction: column; gap: 7px; }
   .field-label { display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: rgba(210,140,40,.6); }

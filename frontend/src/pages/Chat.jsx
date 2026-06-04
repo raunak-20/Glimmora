@@ -4,6 +4,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { chatAPI, authAPI } from "../services/api";
+import ThemeToggle from "../components/ThemeToggle";
+import { useTheme } from "../components/themeContext";
 
 // ── Syntax theme — warm amber ──────────────────────────────────
 const dispatchTheme = {
@@ -56,7 +58,7 @@ const dispatchTheme = {
 };
 
 const INITIAL_MESSAGE = {
-  id: crypto.randomUUID(),
+  id: "initial-msg",
   role: "assistant",
   content: "Hello! I'm your AI assistant. How can I help you today?",
 };
@@ -166,8 +168,85 @@ function IconEdit() {
     </svg>
   );
 }
+function IconSidebarToggle() {
+  return (
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M9 3v18" />
+    </svg>
+  );
+}
+function IconNewChat() {
+  return (
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
 
 function MarkdownRenderer({ content }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
+  const c = isLight
+    ? {
+      p: "#2d1a0d",
+      li: "#3e2917",
+      h1: "#19110b",
+      h2: "#2d1a0d",
+      h3: "#4c3322",
+      a: "#7d5237",
+      blockquote: "rgba(62,41,23,0.65)",
+      th: "#332217",
+      td: "#3e2917",
+      thBg: "rgba(156,102,68,.12)",
+      thBorder: "rgba(156,102,68,.28)",
+      tdBorder: "rgba(156,102,68,.18)",
+      codePre: "rgba(44,28,14,.85)",
+      codePreBorder: "rgba(156,102,68,.25)",
+      inlineCode: "#6e3d20",
+      inlineCodeBorder: "rgba(110,61,32,.45)",
+      blockquoteBorder: "rgba(156,102,68,.55)",
+    }
+    : {
+      p: "#ede3cc",
+      li: "#ddd4bc",
+      h1: "#f0e6ce",
+      h2: "#e8dcca",
+      h3: "#d8ccb4",
+      a: "#d4904a",
+      blockquote: "rgba(237,227,204,.65)",
+      th: "#d8ccb4",
+      td: "#ccc4b0",
+      thBg: "rgba(210,140,40,.08)",
+      thBorder: "rgba(210,140,40,.2)",
+      tdBorder: "rgba(255,255,255,.08)",
+      codePre: "rgba(0,0,0,.5)",
+      codePreBorder: "rgba(210,140,40,.15)",
+      inlineCode: "rgba(210,140,40,.95)",
+      inlineCodeBorder: "rgba(210,140,40,.4)",
+      blockquoteBorder: "rgba(210,140,40,.6)",
+    };
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -185,8 +264,8 @@ function MarkdownRenderer({ content }) {
                   margin: "12px 0",
                   padding: "14px 16px",
                   fontSize: 12,
-                  background: "rgba(0,0,0,.5)",
-                  border: "1px solid rgba(210,140,40,.15)",
+                  background: c.codePre,
+                  border: `1px solid ${c.codePreBorder}`,
                   overflowX: "auto",
                   boxShadow: "none",
                 }}
@@ -202,9 +281,9 @@ function MarkdownRenderer({ content }) {
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: "11.5px",
-                color: "rgba(210,140,40,.95)",
+                color: c.inlineCode,
                 background: "transparent",
-                borderBottom: "1px dashed rgba(210,140,40,.4)",
+                borderBottom: `1px dashed ${c.inlineCodeBorder}`,
                 paddingBottom: "1px",
               }}
             >
@@ -214,46 +293,28 @@ function MarkdownRenderer({ content }) {
         },
         p({ children }) {
           return (
-            <p
-              style={{
-                margin: "0 0 12px",
-                lineHeight: 1.85,
-                color: "#ede3cc",
-                textAlign: "left",
-              }}
-            >
+            <p style={{ margin: "0 0 12px", lineHeight: 1.85, color: c.p, textAlign: "left" }}>
               {children}
             </p>
           );
         },
         ul({ children }) {
           return (
-            <ul
-              style={{ paddingLeft: 22, margin: "0 0 12px", textAlign: "left" }}
-            >
+            <ul style={{ paddingLeft: 22, margin: "0 0 12px", textAlign: "left" }}>
               {children}
             </ul>
           );
         },
         ol({ children }) {
           return (
-            <ol
-              style={{ paddingLeft: 22, margin: "0 0 12px", textAlign: "left" }}
-            >
+            <ol style={{ paddingLeft: 22, margin: "0 0 12px", textAlign: "left" }}>
               {children}
             </ol>
           );
         },
         li({ children }) {
           return (
-            <li
-              style={{
-                marginBottom: 5,
-                color: "#ddd4bc",
-                lineHeight: 1.75,
-                textAlign: "left",
-              }}
-            >
+            <li style={{ marginBottom: 5, color: c.li, lineHeight: 1.75, textAlign: "left" }}>
               {children}
             </li>
           );
@@ -264,11 +325,7 @@ function MarkdownRenderer({ content }) {
               href={href}
               target="_blank"
               rel="noreferrer"
-              style={{
-                color: "#d4904a",
-                textDecoration: "underline",
-                textUnderlineOffset: 3,
-              }}
+              style={{ color: c.a, textDecoration: "underline", textUnderlineOffset: 3 }}
             >
               {children}
             </a>
@@ -278,12 +335,11 @@ function MarkdownRenderer({ content }) {
           return (
             <h1
               style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: "1.5rem",
-                fontWeight: 400,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "1.1rem",
+                fontWeight: 600,
                 margin: "0 0 12px",
-                color: "#f0e6ce",
-                fontStyle: "italic",
+                color: c.h1,
               }}
             >
               {children}
@@ -294,12 +350,11 @@ function MarkdownRenderer({ content }) {
           return (
             <h2
               style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: "1.25rem",
-                fontWeight: 400,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "1rem",
+                fontWeight: 600,
                 margin: "0 0 10px",
-                color: "#e8dcca",
-                fontStyle: "italic",
+                color: c.h2,
               }}
             >
               {children}
@@ -313,7 +368,7 @@ function MarkdownRenderer({ content }) {
                 fontSize: ".9rem",
                 fontWeight: 600,
                 margin: "0 0 8px",
-                color: "#d8ccb4",
+                color: c.h3,
                 textTransform: "uppercase",
                 letterSpacing: ".08em",
               }}
@@ -326,10 +381,10 @@ function MarkdownRenderer({ content }) {
           return (
             <blockquote
               style={{
-                borderLeft: "2px solid rgba(210,140,40,.6)",
+                borderLeft: `2px solid ${c.blockquoteBorder}`,
                 paddingLeft: 16,
                 fontStyle: "italic",
-                color: "rgba(237,227,204,.65)",
+                color: c.blockquote,
                 margin: "12px 0",
               }}
             >
@@ -340,13 +395,7 @@ function MarkdownRenderer({ content }) {
         table({ children }) {
           return (
             <div style={{ overflowX: "auto", margin: "12px 0" }}>
-              <table
-                style={{
-                  borderCollapse: "collapse",
-                  width: "100%",
-                  fontSize: 13,
-                }}
-              >
+              <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 13 }}>
                 {children}
               </table>
             </div>
@@ -356,10 +405,10 @@ function MarkdownRenderer({ content }) {
           return (
             <th
               style={{
-                border: "1px solid rgba(210,140,40,.2)",
+                border: `1px solid ${c.thBorder}`,
                 padding: "7px 12px",
-                background: "rgba(210,140,40,.08)",
-                color: "#d8ccb4",
+                background: c.thBg,
+                color: c.th,
                 fontSize: 11,
                 textTransform: "uppercase",
                 letterSpacing: ".07em",
@@ -374,9 +423,9 @@ function MarkdownRenderer({ content }) {
           return (
             <td
               style={{
-                border: "1px solid rgba(255,255,255,.08)",
+                border: `1px solid ${c.tdBorder}`,
                 padding: "7px 12px",
-                color: "#ccc4b0",
+                color: c.td,
                 textAlign: "left",
               }}
             >
@@ -496,17 +545,13 @@ function SuggestedPrompts({ onSelect }) {
 
 export default function Chat() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem("chat_messages");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (err) {
-        console.error("Failed to parse saved messages: ", err);
-      }
-    }
-    return [INITIAL_MESSAGE];
-  });
+  
+  // App-level state for session management
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionUid, setActiveSessionUid] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -514,9 +559,64 @@ export default function Chat() {
   const textareaRef = useRef(null);
   const abortRef = useRef(null);
 
+  // Fetch recent sessions on mount
   useEffect(() => {
-    localStorage.setItem("chat_messages", JSON.stringify(messages));
-  }, [messages]);
+    fetchSessions();
+  }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const res = await chatAPI.getSessions();
+      setSessions(res.data || []);
+      return res.data;
+    } catch (err) {
+      console.error("Failed to load chat sessions:", err);
+      setError("Failed to load chat history from backend.");
+    }
+  };
+
+  const loadSession = async (uid) => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await chatAPI.getSessionMessages(uid);
+      const loaded = res.data.map((m) => ({
+        id: crypto.randomUUID(),
+        role: m.role,
+        content: m.content,
+      }));
+      setMessages([INITIAL_MESSAGE, ...loaded]);
+      setActiveSessionUid(uid);
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+      setError("Failed to load conversation history.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNewChat = () => {
+    setActiveSessionUid(null);
+    setMessages([INITIAL_MESSAGE]);
+    setError("");
+  };
+
+  const handleDeleteSession = async (e, uid) => {
+    e.stopPropagation();
+    const ok = window.confirm("Delete this conversation?");
+    if (!ok) return;
+    try {
+      await chatAPI.deleteSession(uid);
+      if (activeSessionUid === uid) {
+        handleNewChat();
+      }
+      fetchSessions();
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+      setError("Failed to delete chat session.");
+    }
+  };
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
@@ -542,17 +642,19 @@ export default function Chat() {
     setLoading(true);
     resetH();
     abortRef.current = new AbortController();
-    const history = next
-      .slice(1)
-      .map((m) => ({ role: m.role, content: m.content }));
     try {
       const res = await chatAPI.send(
         text,
-        history,
+        activeSessionUid,
         SYSTEM_PROMPT,
         abortRef.current.signal,
       );
-      const { response, tokens_used } = res.data;
+      const { response, tokens_used, session_uid } = res.data;
+      
+      if (!activeSessionUid) {
+        setActiveSessionUid(session_uid);
+      }
+      
       setMessages((prev) => [
         ...prev,
         {
@@ -562,6 +664,7 @@ export default function Chat() {
           tokens_used,
         },
       ]);
+      fetchSessions();
     } catch (err) {
       if (err.name === "CanceledError") return;
       setError(err.response?.data?.detail || "Something went wrong.");
@@ -574,11 +677,12 @@ export default function Chat() {
     abortRef.current?.abort();
     setLoading(false);
   };
-  const clear = () => {
+  
+  const clearCurrent = () => {
     setMessages([INITIAL_MESSAGE]);
     setError("");
-    localStorage.removeItem("chat_messages");
   };
+
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -598,9 +702,18 @@ export default function Chat() {
 
       <header className="hdr">
         <div className="hdr-left">
-          <span className="hdr-wordmark">Dispatch</span>
-          <span className="hdr-sep">·</span>
-          <span className="hdr-model">gemini-2.5-flash-lite</span>
+          <div className="chatgpt-controls-pill">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="control-btn" title="Toggle sidebar">
+              <IconSidebarToggle />
+            </button>
+            <button onClick={handleNewChat} className="control-btn" title="New Chat">
+              <IconNewChat />
+            </button>
+          </div>
+          <div className="model-selector-pill">
+            <span className="hdr-wordmark">Dispatch</span>
+            <span className="arrow-down">›</span>
+          </div>
         </div>
         <div className="hdr-status-pill">
           <span className="status-ring" />
@@ -611,10 +724,11 @@ export default function Chat() {
             <IconEdit />
             <span>RAG</span>
           </Link>
-          <button onClick={clear} className="nav-btn" title="Clear history">
+          <button onClick={clearCurrent} className="nav-btn" title="Clear current screen">
             <IconTrash />
             <span>Clear</span>
           </button>
+          <ThemeToggle />
           <button
             onClick={handleLogout}
             className="nav-btn nav-btn--danger"
@@ -626,72 +740,106 @@ export default function Chat() {
         </nav>
       </header>
 
-      <div className="scroll-area">
-        <div className="scroll-inner">
-          {!hasMessages && (
-            <div className="welcome">
-              <p className="welcome-eyebrow">AI · Ready</p>
-              <h1 className="welcome-heading">
-                How can I<br />
-                <em>help today?</em>
-              </h1>
-              <p className="welcome-sub">
-                Code, writing, analysis - ask anything.
-              </p>
-              <SuggestedPrompts onSelect={handleSend} />
-            </div>
-          )}
-          <div className="thread">
-            {messages.map((msg) => (
-              <Message key={msg.id} msg={msg} />
-            ))}
-            {loading && <TypingIndicator />}
-            {error && <div className="err-bar">{error}</div>}
+      <div className="app-container">
+        <aside className={`sidebar ${sidebarOpen ? "" : "sidebar--collapsed"}`}>
+          <div className="sidebar-header">
+            <span className="sidebar-title">Recent Chats</span>
           </div>
-          <div ref={bottomRef} />
-        </div>
-      </div>
+          <div className="sidebar-list">
+            {sessions.length === 0 ? (
+              <div className="sidebar-empty">No past conversations</div>
+            ) : (
+              sessions.map((s) => (
+                <div
+                  key={s.uid}
+                  onClick={() => loadSession(s.uid)}
+                  className={`sidebar-item ${activeSessionUid === s.uid ? "sidebar-item--active" : ""}`}
+                >
+                  <span className="sidebar-item-title" title={s.title}>
+                    {s.title}
+                  </span>
+                  <button
+                    onClick={(e) => handleDeleteSession(e, s.uid)}
+                    className="sidebar-delete-btn"
+                    title="Delete conversation"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
 
-      <div className="input-zone">
-        <div className="input-inner">
-          <div className="input-field-wrap">
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={input}
-              onInput={onInput}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              disabled={loading}
-              placeholder="Message Dispatch…"
-              className="input-field"
-            />
-            <div className="input-actions">
-              {loading ? (
-                <button
-                  onClick={stop}
-                  className="send-btn send-btn--stop"
-                  title="Stop"
-                >
-                  <IconStop />
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleSend()}
-                  disabled={!input.trim()}
-                  className={`send-btn ${input.trim() ? "send-btn--active" : "send-btn--idle"}`}
-                  title="Send"
-                >
-                  <IconSend />
-                </button>
+        <main className="main-chat-area">
+          <div className="scroll-area">
+            <div className="scroll-inner">
+              {!hasMessages && (
+                <div className="welcome">
+                  <p className="welcome-eyebrow">AI · Ready</p>
+                  <h1 className="welcome-heading">
+                    How can I<br />
+                    <em>help today?</em>
+                  </h1>
+                  <p className="welcome-sub">
+                    Code, writing, analysis - ask anything.
+                  </p>
+                  <SuggestedPrompts onSelect={handleSend} />
+                </div>
               )}
+              <div className="thread">
+                {messages.map((msg) => (
+                  <Message key={msg.id} msg={msg} />
+                ))}
+                {loading && <TypingIndicator />}
+                {error && <div className="err-bar">{error}</div>}
+              </div>
+              <div ref={bottomRef} />
             </div>
           </div>
-          <p className="disclaimer">
-            Dispatch may produce inaccurate results. Verify important
-            information.
-          </p>
-        </div>
+
+          <div className="input-zone">
+            <div className="input-inner">
+              <div className="input-field-wrap">
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  value={input}
+                  onInput={onInput}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  disabled={loading}
+                  placeholder="Message Dispatch…"
+                  className="input-field"
+                />
+                <div className="input-actions">
+                  {loading ? (
+                    <button
+                      onClick={stop}
+                      className="send-btn send-btn--stop"
+                      title="Stop"
+                    >
+                      <IconStop />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSend()}
+                      disabled={!input.trim()}
+                      className={`send-btn ${input.trim() ? "send-btn--active" : "send-btn--idle"}`}
+                      title="Send"
+                    >
+                      <IconSend />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p className="disclaimer">
+                Dispatch may produce inaccurate results. Verify important
+                information.
+              </p>
+            </div>
+          </div>
+        </main>
       </div>
 
       <style>{`
@@ -721,10 +869,57 @@ export default function Chat() {
           border-bottom: 1px solid rgba(210,140,40,.18);
           background: rgba(13,11,8,.94); backdrop-filter: blur(24px);
         }
-        .hdr-left { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
-        .hdr-wordmark { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 17px; color: #f0e6ce; letter-spacing: .01em; }
-        .hdr-sep { color: rgba(210,140,40,.55); font-size: 15px; }
-        .hdr-model { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(210,140,40,.65); letter-spacing: .03em; }
+        .hdr-left { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+        
+        .chatgpt-controls-pill {
+          display: inline-flex;
+          align-items: center;
+          background: rgba(210,140,40,.1);
+          border: 1px solid rgba(210,140,40,.22);
+          border-radius: 20px;
+          padding: 2px 4px;
+          gap: 2px;
+        }
+        .control-btn {
+          background: transparent;
+          border: none;
+          color: rgba(237,227,204,.65);
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .control-btn:hover {
+          background: rgba(210,140,40,.15);
+          color: rgba(237,227,204,.95);
+        }
+        
+        .model-selector-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          background: rgba(210,140,40,.06);
+          border: 1px solid rgba(210,140,40,.15);
+          border-radius: 15px;
+          font-family: 'Outfit', sans-serif;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .model-selector-pill:hover {
+          background: rgba(210,140,40,.12);
+          border-color: rgba(210,140,40,.3);
+        }
+        .model-selector-pill .arrow-down {
+          color: rgba(210,140,40,.75);
+          font-size: 14px;
+        }
+
+        .hdr-wordmark { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 16px; color: #f0e6ce; letter-spacing: .01em; }
         .hdr-status-pill {
           position: absolute; left: 50%; transform: translateX(-50%);
           display: flex; align-items: center; gap: 6px;
@@ -753,6 +948,115 @@ export default function Chat() {
         .nav-btn:hover { color: rgba(237,227,204,.9); background: rgba(210,140,40,.09); border-color: rgba(210,140,40,.22); }
         .nav-btn--danger { color: rgba(220,120,90,.65); }
         .nav-btn--danger:hover { color: rgba(230,140,110,.95); background: rgba(200,80,60,.09); border-color: rgba(200,80,60,.22); }
+
+        /* App container & Sidebar */
+        .app-container {
+          display: flex;
+          flex: 1;
+          height: calc(100vh - 50px);
+          overflow: hidden;
+          position: relative;
+          z-index: 10;
+        }
+        .sidebar {
+          width: 260px;
+          flex-shrink: 0;
+          background: #181612;
+          border-right: 1px solid rgba(210,140,40,.15);
+          display: flex;
+          flex-direction: column;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+        }
+        .sidebar--collapsed {
+          width: 0;
+          border-right: none;
+        }
+        .sidebar-header {
+          padding: 16px 20px;
+          border-bottom: 1px solid rgba(210,140,40,.08);
+          flex-shrink: 0;
+        }
+        .sidebar-title {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: rgba(210,140,40,.65);
+        }
+        .sidebar-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .sidebar-list::-webkit-scrollbar { width: 3px; }
+        .sidebar-list::-webkit-scrollbar-thumb { background: rgba(210,140,40,.12); border-radius: 3px; }
+        
+        .sidebar-empty {
+          padding: 20px;
+          text-align: center;
+          font-size: 12px;
+          color: rgba(237,227,204,.35);
+          font-style: italic;
+        }
+        .sidebar-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          gap: 8px;
+        }
+        .sidebar-item:hover {
+          background: rgba(210,140,40,.08);
+        }
+        .sidebar-item--active {
+          background: rgba(210,140,40,.15);
+          border: 1px solid rgba(210,140,40,.25);
+        }
+        .sidebar-item-title {
+          font-size: 13px;
+          color: rgba(237,227,204,.75);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          flex: 1;
+        }
+        .sidebar-item--active .sidebar-item-title {
+          color: rgba(237,227,204,.95);
+          font-weight: 500;
+        }
+        .sidebar-delete-btn {
+          background: transparent;
+          border: none;
+          color: rgba(220,120,90,.5);
+          cursor: pointer;
+          font-size: 16px;
+          padding: 0 4px;
+          line-height: 1;
+          transition: color 0.15s;
+          opacity: 0;
+        }
+        .sidebar-item:hover .sidebar-delete-btn {
+          opacity: 1;
+        }
+        .sidebar-delete-btn:hover {
+          color: rgba(220,120,90,0.95);
+        }
+
+        .main-chat-area {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          min-width: 0;
+          background: #13110d;
+        }
 
         /* Scroll */
         .scroll-area { position: relative; z-index: 10; flex: 1; overflow-y: auto; padding: 0 24px; -webkit-overflow-scrolling: touch; }
@@ -798,7 +1102,7 @@ export default function Chat() {
         .pulse-diamond { animation: diamondPulse 1.5s ease-in-out infinite; }
         @keyframes diamondPulse { 0%,100% { opacity: .7; } 50% { opacity: 1; color: rgba(210,140,40,1); } }
         .ai-thread-line { width: 1px; flex: 1; margin-top: 6px; background: linear-gradient(to bottom, rgba(210,140,40,.25), transparent); min-height: 20px; }
-        .msg-ai-body { flex: 1; min-width: 0; font-family: 'Instrument Serif', Georgia, serif; font-size: 15.5px; line-height: 1.85; color: #ede3cc; padding-left: 8px; }
+        .msg-ai-body { flex: 1; min-width: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.65; color: #ede3cc; padding-left: 8px; }
         .msg-ai-body p:last-child { margin-bottom: 0; }
         .msg-ai-footer { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(210,140,40,.09); }
         .token-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(210,140,40,.45); letter-spacing: .04em; }
@@ -808,8 +1112,8 @@ export default function Chat() {
         /* User messages */
         .msg-user-row { display: flex; justify-content: flex-end; padding: 16px 0; animation: fadeSlideIn .25s ease; }
         .msg-user-bubble {
-          position: relative; max-width: 62%; padding: 11px 15px;
-          border-radius: 3px 14px 14px 14px;
+          position: relative; max-width: 62%; padding: 11px 36px 11px 15px;
+          border-radius: 14px 3px 14px 14px;
           background: rgba(210,140,40,.12);
           border: 1px solid rgba(210,140,40,.25);
           font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.65;
@@ -824,7 +1128,7 @@ export default function Chat() {
         @keyframes tdot { 0%,80%,100% { transform: translateY(0); opacity: .5; } 40% { transform: translateY(-5px); opacity: 1; } }
 
         /* Error */
-        .err-bar { margin: 10px 0; padding: 10px 16px; border-radius: 4px; background: rgba(200,80,60,.08); border: 1px solid rgba(200,80,60,.25); font-size: 13px; color: rgba(230,150,130,.9); font-family: 'JetBrains Mono', monospace; }
+        .err-bar { margin: 10px 0; padding: 10px 16px; border-radius: 4px; background: rgba(200,80,60,.08); border: 1px solid rgba(200,80,60,.25); font-size: 13px; color: rgba(230,140,110,.9); font-family: 'JetBrains Mono', monospace; }
 
         /* Input zone */
         .input-zone { position: relative; z-index: 20; flex-shrink: 0; background: rgba(13,11,8,.95); backdrop-filter: blur(24px); border-top: 1px solid rgba(210,140,40,.15); padding: 16px 24px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
@@ -841,8 +1145,16 @@ export default function Chat() {
         .send-btn--stop { background: rgba(200,80,60,.12); border: 1px solid rgba(200,80,60,.3); color: rgba(230,140,120,.8); }
         .disclaimer { font-size: 10.5px; color: rgba(210,140,40,.3); font-family: 'JetBrains Mono', monospace; letter-spacing: .03em; text-align: center; margin-top: 10px; }
 
-        @media (max-width: 768px) { .hdr { padding: 0 16px; } .hdr-status-pill { display: none; } .scroll-area { padding: 0 16px; } .input-zone { padding: 12px 16px; padding-bottom: max(12px,env(safe-area-inset-bottom)); } .msg-user-bubble { max-width: 80%; font-size: 12.5px; } .welcome-heading { font-size: 32px; } }
-        @media (max-width: 480px) { .hdr { height: 46px; padding: 0 12px; } .hdr-model { display: none; } .hdr-sep { display: none; } .nav-btn span:not([style]) { display: none; } .scroll-area { padding: 0 12px; } .scroll-inner { padding: 24px 0 16px; } .input-zone { padding: 10px 12px; padding-bottom: max(12px,env(safe-area-inset-bottom)); } .msg-user-bubble { max-width: 88%; } .welcome { padding: 10px 0 32px; } .prompt-tag { display: none; } }
+        @media (max-width: 768px) { 
+          .hdr { padding: 0 16px; } 
+          .hdr-status-pill { display: none; } 
+          .scroll-area { padding: 0 16px; } 
+          .input-zone { padding: 12px 16px; padding-bottom: max(12px,env(safe-area-inset-bottom)); } 
+          .msg-user-bubble { max-width: 80%; font-size: 12.5px; } 
+          .welcome-heading { font-size: 32px; } 
+          .sidebar { position: absolute; left: 0; top: 0; bottom: 0; z-index: 100; box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
+        }
+        @media (max-width: 480px) { .hdr { height: 46px; padding: 0 12px; } .hdr-sep { display: none; } .nav-btn span:not([style]) { display: none; } .scroll-area { padding: 0 12px; } .scroll-inner { padding: 24px 0 16px; } .input-zone { padding: 10px 12px; padding-bottom: max(12px,env(safe-area-inset-bottom)); } .msg-user-bubble { max-width: 88%; } .welcome { padding: 10px 0 32px; } .prompt-tag { display: none; } }
         @media (min-width: 1280px) { .hdr { padding: 0 36px; } .scroll-area { padding: 0 36px; } .input-zone { padding: 18px 36px 20px; } }
       `}</style>
     </div>

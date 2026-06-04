@@ -3,16 +3,23 @@ RAG router — document upload, ingestion, querying, and management.
 """
 from typing import Optional
 import os
+import time
 import tempfile
 from pathlib import Path
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models.user import RAGDocument, User
+from models.user import RAGDocument, User, RAGQueryHistory
 from services.auth_service import get_current_user
+from services.cache_service import (
+    get_cached_response,
+    set_cached_response,
+    invalidate_user_cache,
+)
 from services.rag_service import (
     DocumentIngestionResult,
     RAGQueryRequest,
@@ -46,6 +53,19 @@ class DocumentRead(BaseModel):
     status: str
     language: Optional[str]
     error_message: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+
+class RAGHistoryItem(BaseModel):
+    id: int
+    question: str
+    answer: str
+    source_documents: Optional[list[str]] = []
+    source_languages: Optional[list[Optional[str]]] = []
+    cache_hit: bool
+    time_ms: Optional[float] = 0.0
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -96,7 +116,41 @@ async def upload_document(
     finally:
         os.unlink(tmp_path)   # always clean up temp file
 
+    # Invalidate cache when new documents are added
+    invalidate_user_cache(current_user.uid)
+
     return result
+
+
+@router.get(
+    "/history",
+    response_model=list[RAGHistoryItem],
+    summary="Get RAG query history for the current user",
+)
+def get_rag_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    history = (
+        db.query(RAGQueryHistory)
+        .filter_by(user_id=current_user.id)
+        .order_by(RAGQueryHistory.created_at.asc())
+        .all()
+    )
+    return history
+
+
+@router.delete(
+    "/history",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete all RAG query history for the current user",
+)
+def delete_rag_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db.query(RAGQueryHistory).filter_by(user_id=current_user.id).delete()
+    db.commit()
 
 
 @router.post(
@@ -109,7 +163,66 @@ def query_rag(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return query_documents(current_user, request)
+    start = time.perf_counter()
+
+    # ── Check cache ──────────────────────────────────────────────────────
+    cached = get_cached_response(current_user.uid, request.question, request.top_k)
+    if cached is not None:
+        elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+        ans = RAGQueryResponse(
+            answer=cached["answer"],
+            source_documents=cached["source_documents"],
+            source_languages=cached.get("source_languages", []),
+            cache_hit=True,
+            time_ms=elapsed_ms,
+        )
+
+        history_entry = RAGQueryHistory(
+            user_id=current_user.id,
+            question=request.question,
+            answer=ans.answer,
+            source_documents=ans.source_documents,
+            source_languages=ans.source_languages,
+            cache_hit=True,
+            time_ms=elapsed_ms,
+        )
+        db.add(history_entry)
+        db.commit()
+
+        return ans
+
+    # ── Cache miss — run full RAG pipeline ───────────────────────────────
+    result = query_documents(current_user, request)
+    elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+
+    # Store in cache for next time
+    set_cached_response(
+        user_uid=current_user.uid,
+        question=request.question,
+        top_k=request.top_k,
+        response_data={
+            "answer": result.answer,
+            "source_documents": result.source_documents,
+            "source_languages": result.source_languages,
+        },
+    )
+
+    result.cache_hit = False
+    result.time_ms = elapsed_ms
+
+    history_entry = RAGQueryHistory(
+        user_id=current_user.id,
+        question=request.question,
+        answer=result.answer,
+        source_documents=result.source_documents,
+        source_languages=result.source_languages,
+        cache_hit=False,
+        time_ms=elapsed_ms,
+    )
+    db.add(history_entry)
+    db.commit()
+
+    return result
 
 
 @router.get(
@@ -134,6 +247,8 @@ def delete_all_documents(
     db: Session = Depends(get_db),
 ):
     delete_user_index(db, current_user)
+    # Invalidate all cached queries for this user
+    invalidate_user_cache(current_user.uid)
 
 
 @router.delete(
@@ -158,3 +273,6 @@ def delete_document(
         )
     db.delete(doc)
     db.commit()
+    # Invalidate cache since knowledge base changed
+    invalidate_user_cache(current_user.uid)
+

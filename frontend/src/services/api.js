@@ -64,12 +64,16 @@ export const authAPI = {
 
 // Chat — signal is passed so the Stop button can abort in-flight requests
 export const chatAPI = {
-  send: (message, history = [], system_prompt = "", signal) =>
+  send: (message, session_uid = null, system_prompt = "", signal) =>
     api.post(
       "/chat/chat",
-      { message, history, system_prompt },
+      { message, session_uid, system_prompt },
       { signal }
     ),
+  getSessions: () => api.get("/chat/sessions"),
+  createSession: () => api.post("/chat/sessions"),
+  getSessionMessages: (sessionUid) => api.get(`/chat/sessions/${sessionUid}/messages`),
+  deleteSession: (sessionUid) => api.delete(`/chat/sessions/${sessionUid}`),
 };
 
 // RAG
@@ -86,6 +90,8 @@ export const ragAPI = {
   listDocuments: () => api.get("/rag/documents"),
   deleteDocument: (id) => api.delete(`/rag/documents/${id}`),
   deleteAll: () => api.delete("/rag/documents"),
+  getHistory: () => api.get("/rag/history"),
+  clearHistory: () => api.delete("/rag/history"),
 };
 
 export default api;

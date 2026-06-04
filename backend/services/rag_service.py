@@ -134,6 +134,8 @@ class RAGQueryResponse(BaseModel):
     answer: str
     source_documents: list[str]
     source_languages: list[Optional[str]] = []
+    cache_hit: bool = False
+    time_ms: float = 0.0
 
 
 class DocumentIngestionResult(BaseModel):

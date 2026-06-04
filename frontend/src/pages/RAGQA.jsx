@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI, ragAPI } from "../services/api";
+import ThemeToggle from "../components/ThemeToggle";
 
 function Diamond() {
   return <span className="d-diamond">◆</span>;
@@ -79,9 +80,7 @@ export default function RAGQA() {
   const [documents, setDocuments] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState([]);
-  const [sourceLanguages, setSourceLanguages] = useState([]);
+  const [queriesHistory, setQueriesHistory] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [asking, setAsking] = useState(false);
   const [loadingDocs, setLoadingDocs] = useState(false);
@@ -112,7 +111,6 @@ export default function RAGQA() {
   useEffect(() => {
     async function init() {
       setLoadingDocs(true);
-
       try {
         const res = await ragAPI.listDocuments();
         setDocuments(res.data || []);
@@ -122,6 +120,13 @@ export default function RAGQA() {
         }
       } finally {
         setLoadingDocs(false);
+      }
+
+      try {
+        const historyRes = await ragAPI.getHistory();
+        setQueriesHistory(historyRes.data || []);
+      } catch (err) {
+        console.error("Failed to load RAG history:", err);
       }
     }
 
@@ -156,18 +161,54 @@ export default function RAGQA() {
     setAsking(true);
     setError("");
     setSuccess("");
-    setAnswer("");
-    setSources([]);
-    setSourceLanguages([]);
     try {
       const res = await ragAPI.query(q, topK);
-      setAnswer(res.data?.answer || "No answer returned.");
-      setSources(res.data?.source_documents || []);
-      setSourceLanguages(res.data?.source_languages || []);
+      const newEntry = {
+        id: res.data.id || Date.now(),
+        question: q,
+        answer: res.data.answer || "No answer returned.",
+        source_documents: res.data.source_documents || [],
+        source_languages: res.data.source_languages || [],
+        cache_hit: res.data.cache_hit ?? false,
+        time_ms: res.data.time_ms ?? 0,
+      };
+      setQueriesHistory((prev) => [...prev, newEntry]);
+      setQuestion("");
     } catch (err) {
       setError(err.response?.data?.detail || "Query failed.");
     } finally {
       setAsking(false);
+    }
+  };
+
+  const handleClearQueryHistory = async () => {
+    const ok = window.confirm("Are you sure you want to clear your RAG query history?");
+    if (!ok) return;
+    setError("");
+    setSuccess("");
+    try {
+      await ragAPI.clearHistory();
+      setQueriesHistory([]);
+      setSuccess("Cleared RAG query history.");
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to clear RAG history.");
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!documents.length || deletingId) return;
+    const ok = window.confirm("Are you sure you want to clear the entire knowledge base?");
+    if (!ok) return;
+    setDeletingId("all");
+    setError("");
+    try {
+      await ragAPI.deleteAll();
+      await loadDocuments();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.detail || "Failed to clear knowledge base");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -296,7 +337,7 @@ export default function RAGQA() {
         .rag-alert--err {
           border-left-color: rgba(210,90,70,.6);
           background: rgba(200,80,60,.08);
-          color: rgba(230,150,130,.9);
+          color: rgba(230,140,110,.9);
         }
 
         /* ── Main grid ── */
@@ -379,16 +420,36 @@ export default function RAGQA() {
           font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
           flex-shrink: 0; padding: 2px 7px; border-radius: 2px;
         }
-        .archive-badge--err { color: rgba(220,130,100,.85); border: 1px solid rgba(200,80,60,.3); }
+        .archive-badge--err { color: rgba(220,120,90,.85); border: 1px solid rgba(200,80,60,.3); }
         .archive-delete {
-          border: none; background: transparent;
-          color: rgba(220,120,90,.65);
-          cursor: pointer; font-size: 10px; letter-spacing: .12em;
-          text-transform: uppercase;
           font-family: 'JetBrains Mono', monospace;
-          transition: color .15s; flex-shrink: 0;
+          font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+          flex-shrink: 0; padding: 2px 7px; border-radius: 2px;
+          color: rgba(220,120,90,.85); border: 1px solid rgba(200,80,60,.3);
+          background: transparent; cursor: pointer;
+          transition: all .15s;
         }
-        .archive-delete:hover { color: rgba(230,140,110,.95); }
+        .archive-delete:hover:not(:disabled) {
+          background: rgba(200,80,60,.25);
+          border-color: rgba(200,80,60,.55);
+          color: rgba(230,140,110,1);
+        }
+        .clear-kb-btn {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+          padding: 3px 8px; border-radius: 3px;
+          color: rgba(220,120,90,.85); border: 1px solid rgba(200,80,60,.3);
+          background: transparent; cursor: pointer;
+          transition: all .15s;
+        }
+        .clear-kb-btn:hover:not(:disabled) {
+          background: rgba(200,80,60,.25);
+          border-color: rgba(200,80,60,.55);
+          color: rgba(230,140,110,1);
+        }
+        .clear-kb-btn:disabled {
+          opacity: 0.3; cursor: not-allowed;
+        }
         .archive-delete:disabled { opacity: .35; cursor: not-allowed; }
 
         .kb-stats {
@@ -491,10 +552,36 @@ export default function RAGQA() {
           background: linear-gradient(to bottom, rgba(210,140,40,.3), transparent);
           min-height: 80px;
         }
+
+        /* ── Cache indicator ── */
+        .cache-indicator {
+          display: flex; align-items: center; gap: 12px;
+          margin-top: 14px; padding-top: 10px;
+          border-top: 1px solid rgba(210,140,40,.09);
+        }
+        .cache-badge {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+          padding: 3px 8px; border-radius: 3px;
+          font-weight: 600;
+        }
+        .cache-badge--hit {
+          color: rgba(80,200,120,.95); border: 1px solid rgba(80,200,120,.35);
+          background: rgba(80,200,120,.08);
+        }
+        .cache-badge--miss {
+          color: rgba(210,140,40,.85); border: 1px solid rgba(210,140,40,.3);
+          background: rgba(210,140,40,.08);
+        }
+        .cache-time {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px; color: rgba(210,140,40,.55);
+          letter-spacing: .04em;
+        }
         .answer-body {
           flex: 1; min-width: 0;
-          font-family: 'Instrument Serif', Georgia, serif;
-          font-size: 16px; line-height: 1.95;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 13px; line-height: 1.65;
           color: #ede3cc;
           white-space: pre-wrap; word-break: break-word; padding-left: 8px;
         }
@@ -567,6 +654,7 @@ export default function RAGQA() {
             <Link to="/chat" className="nav-btn">
               ← Chat
             </Link>
+            <ThemeToggle />
             <button className="nav-btn nav-btn--danger" onClick={handleLogout}>
               <IconLogout /> Sign out
             </button>
@@ -617,19 +705,27 @@ export default function RAGQA() {
             <section>
               <div className="section-title">
                 <Diamond /> Indexed dossiers
-                {loadingDocs && (
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      fontSize: 10,
-                      color: "rgba(210,140,40,.55)",
-                      fontFamily: "'JetBrains Mono', monospace",
-                      letterSpacing: ".08em",
-                    }}
+                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+                  {loadingDocs && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: "rgba(210,140,40,.55)",
+                        fontFamily: "'JetBrains Mono', monospace",
+                        letterSpacing: ".08em",
+                      }}
+                    >
+                      Loading...
+                    </span>
+                  )}
+                  <button
+                    onClick={handleDeleteAll}
+                    className="clear-kb-btn"
+                    disabled={documents.length === 0 || deletingId}
                   >
-                    Loading...
-                  </span>
-                )}
+                    {deletingId === "all" ? "Clearing..." : "Clear All"}
+                  </button>
+                </div>
               </div>
               <div className="archive-list">
                 {documents.length === 0 && !loadingDocs ? (
@@ -670,17 +766,26 @@ export default function RAGQA() {
                   AI synthesis.
                 </p>
               </div>
-              <label className="topk-group">
-                Top K
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={topK}
-                  onChange={(e) => setTopK(Number(e.target.value) || 4)}
-                  className="topk-input"
-                />
-              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <button
+                  onClick={handleClearQueryHistory}
+                  disabled={queriesHistory.length === 0}
+                  className="clear-kb-btn"
+                >
+                  Clear History
+                </button>
+                <label className="topk-group">
+                  Top K
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={topK}
+                    onChange={(e) => setTopK(Number(e.target.value) || 4)}
+                    className="topk-input"
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="question-wrap">
@@ -699,63 +804,95 @@ export default function RAGQA() {
               </button>
             </div>
 
-            <div className="response-grid">
-              <div className="answer-thread-row">
-                <div className="answer-marker">
-                  <span
-                    className={`d-diamond${asking ? " d-diamond--pulse" : ""}`}
-                  >
-                    ◆
-                  </span>
-                  <div className="answer-thread-line" />
-                </div>
-                <div className="answer-body">
-                  {answer ? (
-                    answer
-                  ) : (
+            {queriesHistory.length === 0 && !asking ? (
+              <div className="response-grid">
+                <div className="answer-thread-row">
+                  <div className="answer-marker">
+                    <span className="d-diamond">◆</span>
+                    <div className="answer-thread-line" />
+                  </div>
+                  <div className="answer-body">
                     <span className="answer-placeholder">
-                      The archive response will appear here.
+                      No query history yet. The archive response will appear here.
                     </span>
-                  )}
+                  </div>
                 </div>
+                <aside>
+                  <div className="sources-label">Source citations</div>
+                  <div className="sources-empty">No citations yet.</div>
+                </aside>
               </div>
-
-              <aside>
-                <div className="sources-label">Source citations</div>
-                {sources.length > 0 &&
-                  (() => {
-                    const langs = [...new Set(sourceLanguages.filter(Boolean))];
-                    return langs.length > 0 ? (
-                      <div className="source-langs-row">
-                        {langs.map((lang) => (
-                          <span key={lang} className="source-lang-tag">
-                            {lang}
-                          </span>
-                        ))}
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "28px", marginTop: "24px" }}>
+                {queriesHistory.map((item, idx) => (
+                  <div key={item.id || idx} className="response-grid" style={{ marginTop: 0, paddingTop: "20px", borderTop: idx > 0 ? "1px solid rgba(210,140,40,.12)" : "none" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div style={{ fontStyle: "italic", color: "rgba(210,140,40,.85)", fontSize: "14px", fontFamily: "'JetBrains Mono', monospace" }}>
+                        Q: {item.question}
                       </div>
-                    ) : null;
-                  })()}
-                <div className="sources-list">
-                  {sources.length === 0 ? (
-                    <div className="sources-empty">No citations yet.</div>
-                  ) : (
-                    sources.map((src, idx) => (
-                      <div key={src + idx} className="source-entry">
-                        <div className="source-index">
-                          [{String(idx + 1).padStart(2, "0")}]
+                      <div className="answer-thread-row">
+                        <div className="answer-marker">
+                          <span className="d-diamond">◆</span>
+                          <div className="answer-thread-line" />
                         </div>
-                        <div className="source-name">{src}</div>
-                        {sourceLanguages[idx] && (
-                          <div className="source-lang">
-                            {sourceLanguages[idx]}
+                        <div className="answer-body">
+                          {item.answer}
+                          <div className="cache-indicator">
+                            <span className={`cache-badge ${item.cache_hit ? 'cache-badge--hit' : 'cache-badge--miss'}`}>
+                              {item.cache_hit ? '⚡ CACHE HIT' : '◆ CACHE MISS'}
+                            </span>
+                            {item.time_ms !== null && (
+                              <span className="cache-time">{item.time_ms} ms</span>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              </aside>
-            </div>
+                    </div>
+
+                    <aside>
+                      <div className="sources-label">Source citations</div>
+                      {item.source_documents && item.source_documents.length > 0 ? (
+                        <div className="sources-list">
+                          {item.source_documents.map((src, srcIdx) => (
+                            <div key={src + srcIdx} className="source-entry">
+                              <div className="source-index">
+                                [{String(srcIdx + 1).padStart(2, "0")}]
+                              </div>
+                              <div className="source-name">{src}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="sources-empty">No citations.</div>
+                      )}
+                    </aside>
+                  </div>
+                ))}
+
+                {asking && (
+                  <div className="response-grid" style={{ marginTop: 0, paddingTop: "20px", borderTop: "1px solid rgba(210,140,40,.12)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div style={{ fontStyle: "italic", color: "rgba(210,140,40,.85)", fontSize: "14px", fontFamily: "'JetBrains Mono', monospace" }}>
+                        Q: {question}
+                      </div>
+                      <div className="answer-thread-row">
+                        <div className="answer-marker">
+                          <span className="d-diamond d-diamond--pulse">◆</span>
+                          <div className="answer-thread-line" />
+                        </div>
+                        <div className="answer-body">
+                          <span className="answer-placeholder">Retrieving knowledge and formulating response...</span>
+                        </div>
+                      </div>
+                    </div>
+                    <aside>
+                      <div className="sources-label">Source citations</div>
+                      <div className="sources-empty">Searching documents...</div>
+                    </aside>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         </div>
       </div>

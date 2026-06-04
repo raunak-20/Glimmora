@@ -1,13 +1,7 @@
-"""
-SQLAlchemy ORM models — User and related tables.
-"""
-# At the top, add Optional to imports
 from typing import Optional
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, ForeignKey
-
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, ForeignKey, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -53,29 +47,68 @@ class User(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession", back_populates="user", cascade="all, delete-orphan"
+    )
     chat_messages: Mapped[list["ChatMessage"]] = relationship(
         "ChatMessage", back_populates="user", cascade="all, delete-orphan"
     )
     rag_documents: Mapped[list["RAGDocument"]] = relationship(
         "RAGDocument", back_populates="user", cascade="all, delete-orphan"
     )
+    rag_queries: Mapped[list["RAGQueryHistory"]] = relationship(
+        "RAGQueryHistory", back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r}>"
 
 
+# ChatSession (thread of messages)
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    uid: Mapped[str] = mapped_column(
+        String(36),
+        default=lambda: str(uuid.uuid4()),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(255), default="New Chat", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    # ── Relationships ─────────────────────────────────────────────────────
+    user: Mapped["User"] = relationship("User", back_populates="chat_sessions")
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        "ChatMessage", back_populates="session", cascade="all, delete-orphan"
+    )
+
 
 # ChatMessage  (stored conversation history)
-
-
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
-        # ForeignKey constraint added via string reference to avoid circular imports
         nullable=False,
+        index=True,
+    )
+    session_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("chat_sessions.id"),
+        nullable=True,
         index=True,
     )
     role: Mapped[str] = mapped_column(String(20), nullable=False)   # "user" | "assistant"
@@ -86,14 +119,12 @@ class ChatMessage(Base):
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
 
-    # ── Relationship ──────────────────────────────────────────────────────
+    # ── Relationships ──────────────────────────────────────────────────────
     user: Mapped["User"] = relationship("User", back_populates="chat_messages")
-
+    session: Mapped[Optional["ChatSession"]] = relationship("ChatSession", back_populates="messages")
 
 
 # RAGDocument  (metadata for ingested documents)
-
-
 class RAGDocument(Base):
     __tablename__ = "rag_documents"
 
@@ -120,3 +151,27 @@ class RAGDocument(Base):
 
     # ── Relationship ──────────────────────────────────────────────────────
     user: Mapped["User"] = relationship("User", back_populates="rag_documents")
+
+
+# RAGQueryHistory (stored RAG QA history)
+class RAGQueryHistory(Base):
+    __tablename__ = "rag_query_histories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer: Mapped[str] = mapped_column(Text, nullable=False)
+    source_documents: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
+    source_languages: Mapped[Optional[list[Optional[str]]]] = mapped_column(JSON, nullable=True)
+    cache_hit: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    time_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    # ── Relationship ──────────────────────────────────────────────────────
+    user: Mapped["User"] = relationship("User", back_populates="rag_queries")

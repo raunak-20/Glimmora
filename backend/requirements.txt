@@ -26,3 +26,6 @@ pydantic[email]>=2.7.0
 
 # Optional dev tools
 python-dotenv>=1.0.0
+
+# Caching
+redis>=5.0.0
