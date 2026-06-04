@@ -8,6 +8,30 @@ node_modules/
 
 # Environment variables
 .env
+**/.env
+.env.local
+.env.*.local
 
 # OS files
 .DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+frontend/dist/
+
+# Databases and Vector indexes
+*.db
+*.sqlite
+vector_stores/
+backend/vector_stores/
+
+# Cache snapshot dumps
+*.rdb
+dump.rdb
+
+# Log files and directories
+*.log
+logs/
+backend/logs/

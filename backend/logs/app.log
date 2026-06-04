@@ -1,8 +1,0 @@
-{"timestamp": "2026-06-04T19:55:57.299053+00:00", "level": "INFO", "message": "AFC is enabled with max remote calls: 10.", "module": "models", "request_id": "-"}
-{"timestamp": "2026-06-04T19:55:57.782361+00:00", "level": "INFO", "message": "HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent \"HTTP/1.1 429 Too Many Requests\"", "module": "_client", "request_id": "-"}
-{"timestamp": "2026-06-04T19:56:16.887172+00:00", "level": "INFO", "message": "AFC is enabled with max remote calls: 10.", "module": "models", "request_id": "-"}
-{"timestamp": "2026-06-04T19:56:17.056308+00:00", "level": "INFO", "message": "HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent \"HTTP/1.1 429 Too Many Requests\"", "module": "_client", "request_id": "-"}
-{"timestamp": "2026-06-04T20:19:22.553359+00:00", "level": "INFO", "message": "AFC is enabled with max remote calls: 10.", "module": "models", "request_id": "-"}
-{"timestamp": "2026-06-04T20:19:22.928615+00:00", "level": "INFO", "message": "HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent \"HTTP/1.1 429 Too Many Requests\"", "module": "_client", "request_id": "-"}
-{"timestamp": "2026-06-04T20:31:35.593953+00:00", "level": "INFO", "message": "AFC is enabled with max remote calls: 10.", "module": "models", "request_id": "-"}
-{"timestamp": "2026-06-04T20:31:35.976967+00:00", "level": "INFO", "message": "HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent \"HTTP/1.1 429 Too Many Requests\"", "module": "_client", "request_id": "-"}
