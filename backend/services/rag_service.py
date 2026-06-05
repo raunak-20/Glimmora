@@ -8,17 +8,10 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    PyPDFLoader,
-    TextLoader,
-    UnstructuredMarkdownLoader,
-)
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -42,8 +35,8 @@ if not LLM_MODEL:
 
 VECTOR_STORE_DIR = Path(os.getenv("VECTOR_STORE_DIR", "./vector_stores"))
 
-if not VECTOR_STORE_DIR:
-    raise RuntimeError("VECTOR_STORE_DIR is not set")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE"))
@@ -96,23 +89,36 @@ LANGUAGE_MAP = {
 
 # Gemini setup
 
+genai_configured = False
 
-genai.configure(api_key=GEMINI_API_KEY)
+def _configure_genai_lazy():
+    global genai_configured
+    if not genai_configured:
+        import google.generativeai as genai
+        genai.configure(api_key=GEMINI_API_KEY)
+        global gemini_model
+        gemini_model = genai.GenerativeModel(LLM_MODEL)
+        genai_configured = True
 
-gemini_model = genai.GenerativeModel(LLM_MODEL)
+# Helper to run gemini content generation lazy
+def ask_gemini(prompt: str) -> str:
+    _configure_genai_lazy()
+    response = gemini_model.generate_content(prompt)
+    return response.text
 
 
 # Embeddings
 
 
-_embeddings: Optional[HuggingFaceEmbeddings] = None
+_embeddings: Optional[GoogleGenerativeAIEmbeddings] = None
 
 
-def get_embeddings() -> HuggingFaceEmbeddings:
+def get_embeddings() -> GoogleGenerativeAIEmbeddings:
     global _embeddings
     if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        _embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/gemini-embedding-2",
+            google_api_key=GEMINI_API_KEY
         )
     return _embeddings
 
@@ -155,24 +161,18 @@ def _user_index_path(user_uid: str) -> Path:
     return path
 
 
-def _load_or_create_vectorstore(user_uid: str) -> Optional[FAISS]:
-
-    index_path = _user_index_path(user_uid)
-
-    faiss_file = index_path / "index.faiss"
-
-    if faiss_file.exists():
-        return FAISS.load_local(
-            str(index_path),
-            get_embeddings(),
-            allow_dangerous_deserialization=True,
+def _load_or_create_vectorstore(user_uid: str) -> PineconeVectorStore:
+    if not PINECONE_API_KEY or not PINECONE_INDEX_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Pinecone credentials are not configured. Please set PINECONE_API_KEY and PINECONE_INDEX_NAME in the environment."
         )
-
-    return None
-
-
-def _save_vectorstore(vs: FAISS, user_uid: str):
-    vs.save_local(str(_user_index_path(user_uid)))
+    return PineconeVectorStore(
+        index_name=PINECONE_INDEX_NAME,
+        embedding=get_embeddings(),
+        pinecone_api_key=PINECONE_API_KEY,
+        namespace=user_uid
+    )
 
 
 def _file_sha256(path: str) -> str:
@@ -191,23 +191,19 @@ def _loader_for_file(file_path: str):
     ext = Path(file_path).suffix.lower()
 
     if ext == ".pdf":
+        from langchain_community.document_loaders import PyPDFLoader
         return PyPDFLoader(file_path)
 
     elif ext in {".md", ".markdown"}:
+        from langchain_community.document_loaders import UnstructuredMarkdownLoader
         return UnstructuredMarkdownLoader(file_path)
 
+    from langchain_community.document_loaders import TextLoader
     return TextLoader(file_path, encoding="utf-8")
 
 
 
-# Gemini helper
-
-
-def ask_gemini(prompt: str) -> str:
-
-    response = gemini_model.generate_content(prompt)
-
-    return response.text
+# Ingestion
 
 
 
@@ -250,6 +246,7 @@ def ingest_document(
 
         raw_docs = loader.load()
 
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=CHUNK_SIZE,
             chunk_overlap=CHUNK_OVERLAP,
@@ -262,19 +259,8 @@ def ingest_document(
             if language:
                 chunk.metadata["language"] = language
 
-        existing_vs = _load_or_create_vectorstore(user.uid)
-
-        if existing_vs:
-
-            existing_vs.add_documents(chunks)
-
-            _save_vectorstore(existing_vs, user.uid)
-
-        else:
-
-            new_vs = FAISS.from_documents(chunks, get_embeddings())
-
-            _save_vectorstore(new_vs, user.uid)
+        vs = _load_or_create_vectorstore(user.uid)
+        vs.add_documents(chunks)
 
         doc_record.chunk_count = len(chunks)
         doc_record.status = "ready"
@@ -312,13 +298,23 @@ def query_documents(
     request: RAGQueryRequest,
 ) -> RAGQueryResponse:
 
-    vs = _load_or_create_vectorstore(user.uid)
+    from pinecone import Pinecone
+    try:
+        pc = Pinecone(api_key=PINECONE_API_KEY)
+        index = pc.Index(PINECONE_INDEX_NAME)
+        stats = index.describe_index_stats()
+        namespace_stats = stats.get("namespaces", {})
+        if user.uid not in namespace_stats or namespace_stats[user.uid].get("vector_count", 0) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No documents uploaded yet.",
+            )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        logger.warning(f"Could not fetch Pinecone stats: {exc}")
 
-    if vs is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No documents uploaded yet.",
-        )
+    vs = _load_or_create_vectorstore(user.uid)
 
     docs = vs.similarity_search(
         request.question,
@@ -403,12 +399,13 @@ def delete_user_index(
     user: User,
 ):
 
-    import shutil
-
-    index_path = _user_index_path(user.uid)
-
-    if index_path.exists():
-        shutil.rmtree(index_path)
+    try:
+        from pinecone import Pinecone
+        pc = Pinecone(api_key=PINECONE_API_KEY)
+        index = pc.Index(PINECONE_INDEX_NAME)
+        index.delete(delete_all=True, namespace=user.uid)
+    except Exception as exc:
+        logger.warning(f"Failed to delete Pinecone namespace {user.uid}: {exc}")
 
     db.query(RAGDocument).filter_by(user_id=user.id).delete()
 
