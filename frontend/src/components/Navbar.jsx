@@ -55,6 +55,79 @@ function IconLogout() {
   );
 }
 
+function IconChat() {
+  return (
+    <svg
+      width={12}
+      height={12}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function IconRAG() {
+  return (
+    <svg
+      width={12}
+      height={12}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
+function IconLogs() {
+  return (
+    <svg
+      width={12}
+      height={12}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="4 17 10 11 4 5" />
+      <line x1="12" y1="19" x2="20" y2="19" />
+    </svg>
+  );
+}
+
+function IconClear() {
+  return (
+    <svg
+      width={12}
+      height={12}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
 export default function Navbar({
   currentPage,
   statusText = "online",
@@ -112,6 +185,7 @@ export default function Navbar({
           }}
           title="Clear current screen"
         >
+          <IconClear />
           <span>Clear</span>
         </button>
         <Link
@@ -119,6 +193,7 @@ export default function Navbar({
           className={`nav-btn ${currentPage === "chat" ? "nav-btn--active" : ""}`}
           style={currentPage === "chat" ? { background: "rgba(210,140,40,.09)", borderColor: "rgba(210,140,40,.22)" } : {}}
         >
+          <IconChat />
           <span>Chat</span>
         </Link>
         <Link
@@ -126,6 +201,7 @@ export default function Navbar({
           className={`nav-btn ${currentPage === "rag" ? "nav-btn--active" : ""}`}
           style={currentPage === "rag" ? { background: "rgba(210,140,40,.09)", borderColor: "rgba(210,140,40,.22)" } : {}}
         >
+          <IconRAG />
           <span>RAG</span>
         </Link>
         <Link
@@ -133,6 +209,7 @@ export default function Navbar({
           className={`nav-btn ${currentPage === "logs" ? "nav-btn--active" : ""}`}
           style={currentPage === "logs" ? { background: "rgba(210,140,40,.09)", borderColor: "rgba(210,140,40,.22)" } : {}}
         >
+          <IconLogs />
           <span>Logs</span>
         </Link>
 
